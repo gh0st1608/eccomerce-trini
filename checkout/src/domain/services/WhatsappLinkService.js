@@ -1,5 +1,18 @@
 import { WhatsappLinkServicePort } from '../../application/ports/WhatsappLinkServicePort.js';
 
+function buildCustomerName(customer = {}) {
+  return [
+    customer.firstName,
+    customer.paternalLastName || customer.lastName,
+    customer.maternalLastName,
+  ].filter(Boolean).join(' ');
+}
+
+function buildWhatsappMessage(customer, link) {
+  const customerName = buildCustomerName(customer);
+  return customerName && link ? `${customerName}\n${link}` : link;
+}
+
 export class WhatsappLinkService extends WhatsappLinkServicePort {
   constructor({ whatsappClient, urlShortenerClient = null }) {
     super();
@@ -14,7 +27,8 @@ export class WhatsappLinkService extends WhatsappLinkServicePort {
       ? await this.urlShortenerClient.shorten(linkToShare)
       : linkToShare;
     const shortSharedCartUrl = shortenedLink && shortenedLink !== linkToShare ? shortenedLink : null;
-    const message = shortSharedCartUrl || linkToShare || shortenedLink || '';
+    const messageLink = shortSharedCartUrl || linkToShare || shortenedLink || '';
+    const message = buildWhatsappMessage(options.customer, messageLink);
 
     return {
       checkoutUrl: this.whatsappClient.buildLink(message),

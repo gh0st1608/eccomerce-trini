@@ -54,6 +54,7 @@ export class BuildWhatsappCheckoutUseCase {
 
     const result = await this.whatsappLinkService.buildCheckoutLink(cart, deliveryDetails, {
       sharedCartUrl,
+      customer: payload.customer,
     });
 
     await this.productRepository.registerCheckoutItems(

@@ -15,8 +15,13 @@ export const checkoutSchema = z.object({
   customer: z.object({
     phone: z.string().trim().min(6).max(30),
     firstName: z.string().trim().min(2).max(100),
-    lastName: z.string().trim().min(2).max(100),
-  }),
+    lastName: z.string().trim().min(2).max(100).optional(),
+    paternalLastName: z.string().trim().min(2).max(100).optional(),
+    maternalLastName: z.string().trim().min(2).max(100).optional(),
+  }).refine(
+    (customer) => Boolean(customer.lastName || (customer.paternalLastName && customer.maternalLastName)),
+    { message: 'A complete customer last name is required', path: ['paternalLastName'] },
+  ),
   delivery: z.discriminatedUnion('method', [
     z.object({
       method: z.literal('courier'),

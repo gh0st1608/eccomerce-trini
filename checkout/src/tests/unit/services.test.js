@@ -2,6 +2,28 @@ import { WhatsappLinkService } from '../../domain/services/WhatsappLinkService.j
 import { jest } from '@jest/globals';
 
 describe('WhatsappLinkService', () => {
+  test('buildCheckoutLink sends full customer name followed by shared cart link', async () => {
+    const whatsappClient = { buildLink: jest.fn().mockReturnValue('https://wa.me/1') };
+    const service = new WhatsappLinkService({ whatsappClient });
+
+    await service.buildCheckoutLink(
+      { items: [{ productName: 'Jean', quantity: 1, total: 120 }] },
+      { method: 'courier' },
+      {
+        customer: {
+          firstName: 'Ana',
+          paternalLastName: 'Perez',
+          maternalLastName: 'Gomez',
+        },
+        sharedCartUrl: 'https://shop.example.com/cart/shared?token=abc',
+      },
+    );
+
+    expect(whatsappClient.buildLink).toHaveBeenCalledWith(
+      'Ana Perez Gomez\nhttps://shop.example.com/cart/shared?token=abc',
+    );
+  });
+
   test('buildCheckoutLink sends only shared cart link in message', async () => {
     const whatsappClient = { buildLink: jest.fn().mockReturnValue('https://wa.me/1') };
     const service = new WhatsappLinkService({ whatsappClient });

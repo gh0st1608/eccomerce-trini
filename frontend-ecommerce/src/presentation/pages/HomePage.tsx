@@ -23,6 +23,7 @@ import { createCheckoutGateway } from '@infrastructure/factories/createCheckoutG
 import { createProductRepository } from '@infrastructure/factories/createProductRepository'
 import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
 import { CatalogFilters } from '@presentation/components/CatalogFilters'
+import { CategoryCarousel, type CarouselCategory } from '@presentation/components/CategoryCarousel'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { ProductCard } from '@presentation/components/ProductCard'
 import { ProductDetailPanel } from '@presentation/components/ProductDetailPanel'
@@ -48,7 +49,8 @@ export function HomePage() {
   const [checkoutErrorMessage, setCheckoutErrorMessage] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [referenceFirstName, setReferenceFirstName] = useState('')
-  const [referenceLastName, setReferenceLastName] = useState('')
+  const [referencePaternalLastName, setReferencePaternalLastName] = useState('')
+  const [referenceMaternalLastName, setReferenceMaternalLastName] = useState('')
   const { cartItemsList, cartItemCount, cartSubtotal, addToCart, removeFromCart, clearCart } =
     useCart()
 
@@ -62,9 +64,16 @@ export function HomePage() {
     return new GenerateCheckoutUrlUseCase(checkoutGateway)
   }, [])
 
-  const categories = useMemo(() => {
+  const categories = useMemo<CarouselCategory[]>(() => {
     const categorySet = new Set(products.map((product) => product.category))
-    return ['Todos', ...Array.from(categorySet)]
+    return [
+      { name: 'Todos', count: products.length },
+      ...Array.from(categorySet).map((name) => ({
+        name,
+        count: products.filter((product) => product.category === name).length,
+        imageUrl: products.find((product) => product.category === name)?.imageUrl,
+      })),
+    ]
   }, [products])
 
   const minPrice = useMemo(() => {
@@ -138,9 +147,10 @@ export function HomePage() {
     return (
       customerPhone.trim().length >= 6
       && referenceFirstName.trim().length >= 2
-      && referenceLastName.trim().length >= 2
+      && referencePaternalLastName.trim().length >= 2
+      && referenceMaternalLastName.trim().length >= 2
     )
-  }, [customerPhone, referenceFirstName, referenceLastName])
+  }, [customerPhone, referenceFirstName, referencePaternalLastName, referenceMaternalLastName])
 
   useEffect(() => {
     async function loadProducts() {
@@ -199,7 +209,8 @@ export function HomePage() {
       const checkoutCustomer: CheckoutCustomer = {
         phone: customerPhone.trim(),
         firstName: referenceFirstName.trim(),
-        lastName: referenceLastName.trim(),
+        paternalLastName: referencePaternalLastName.trim(),
+        maternalLastName: referenceMaternalLastName.trim(),
       }
 
       const checkoutLinks = await generateCheckoutUrlUseCase.execute(
@@ -215,7 +226,7 @@ export function HomePage() {
         shortSharedCartUrl: checkoutLinks.shortSharedCartUrl ?? undefined,
         customerPhone: checkoutCustomer.phone,
         referenceFirstName: checkoutCustomer.firstName,
-        referenceLastName: checkoutCustomer.lastName,
+        referenceLastName: `${checkoutCustomer.paternalLastName} ${checkoutCustomer.maternalLastName}`,
       })
       window.open(checkoutLinks.checkoutUrl, '_blank', 'noopener,noreferrer')
       clearCart()
@@ -358,12 +369,14 @@ export function HomePage() {
             </Alert.Root>
           ) : null}
 
+          <CategoryCarousel
+            categories={categories}
+            onSelectCategory={setSelectedCategory}
+          />
+
           <Flex direction={{ base: 'column', xl: 'row' }} gap={{ base: 4, md: 6 }} align="start">
             <Box width={{ base: '100%', xl: '280px' }}>
               <CatalogFilters
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
                 minPrice={minPrice}
                 maxPrice={maxPrice}
                 selectedMaxPrice={selectedMaxPrice}
@@ -591,14 +604,20 @@ export function HomePage() {
                   bg="white"
                 />
                 <Input
-                  placeholder="Apellido"
-                  value={referenceLastName}
-                  onChange={(event) => setReferenceLastName(event.target.value)}
+                  placeholder="Apellido paterno"
+                  value={referencePaternalLastName}
+                  onChange={(event) => setReferencePaternalLastName(event.target.value)}
+                  bg="white"
+                />
+                <Input
+                  placeholder="Apellido materno"
+                  value={referenceMaternalLastName}
+                  onChange={(event) => setReferenceMaternalLastName(event.target.value)}
                   bg="white"
                 />
                 {!isCustomerInfoValid ? (
                   <Text color="#b91c1c" fontSize="xs">
-                    Completa celular, nombre y apellido para habilitar WhatsApp.
+                    Completa celular, nombre y ambos apellidos para habilitar WhatsApp.
                   </Text>
                 ) : null}
               </VStack>

@@ -103,14 +103,6 @@ export function CategoriesPage() {
             </Text>
           </Stack>
 
-          <Box width="100%" maxW="100%" minW={0}>
-            <img
-              src="/banner_categories.jpeg"
-              alt="Lo que quieres, cuando quieres: envíos a todo el país"
-              style={{ display: 'block', width: '100%', maxWidth: '100%', height: 'auto' }}
-            />
-          </Box>
-
           {isLoading ? (
             <Text color="#0f172a" fontWeight="semibold">
               Cargando categorias...

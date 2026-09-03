@@ -1,9 +1,6 @@
 import { Badge, Box, Button, Heading, HStack, Stack, Text } from '@chakra-ui/react'
 
 interface CatalogFiltersProps {
-  categories: string[]
-  selectedCategory: string
-  onSelectCategory: (category: string) => void
   minPrice: number
   maxPrice: number
   selectedMaxPrice: number
@@ -14,9 +11,6 @@ interface CatalogFiltersProps {
 }
 
 export function CatalogFilters({
-  categories,
-  selectedCategory,
-  onSelectCategory,
   minPrice,
   maxPrice,
   selectedMaxPrice,
@@ -45,32 +39,6 @@ export function CatalogFilters({
             Reset
           </Button>
         </HStack>
-
-        <Stack gap={2}>
-          <Text fontWeight="semibold" color="#334155">
-            Categoria
-          </Text>
-          <HStack gap={2} wrap="wrap">
-            {categories.map((category) => {
-              const isActive = selectedCategory === category
-              return (
-                <Button
-                  key={category}
-                  size={{ base: 'xs', md: 'sm' }}
-                  borderRadius="full"
-                  variant={isActive ? 'solid' : 'outline'}
-                  bg={isActive ? '#4a1d63' : 'white'}
-                  color={isActive ? 'white' : '#513766'}
-                  borderColor="#dcc9e6"
-                  _hover={isActive ? { bg: '#351344' } : { bg: '#f7effa' }}
-                  onClick={() => onSelectCategory(category)}
-                >
-                  {category}
-                </Button>
-              )
-            })}
-          </HStack>
-        </Stack>
 
         <Stack gap={2}>
           <Text fontWeight="semibold" color="#334155">

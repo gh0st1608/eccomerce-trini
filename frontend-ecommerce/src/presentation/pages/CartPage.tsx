@@ -15,17 +15,12 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { GenerateCheckoutUrlUseCase } from '@application/use-cases/GenerateCheckoutUrlUseCase'
-import { GetFeaturedProductsUseCase } from '@application/use-cases/GetFeaturedProductsUseCase'
 import type { CheckoutItem } from '@domain/entities/CheckoutItem'
 import type { CheckoutCustomer } from '@domain/entities/CheckoutCustomer'
-import type { Product } from '@domain/entities/Product'
 import { createCheckoutGateway } from '@infrastructure/factories/createCheckoutGateway'
 import { ListPickupStoresUseCase } from '@application/use-cases/ListPickupStoresUseCase'
 import { createPickupStoreRepository } from '@infrastructure/factories/createPickupStoreRepository'
-import { createProductRepository } from '@infrastructure/factories/createProductRepository'
-import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
 import { formatCurrency } from '@shared/utils/currency'
-import { CategoryCarousel, type CarouselCategory } from '@presentation/components/CategoryCarousel'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { useNavigate } from 'react-router-dom'
@@ -54,10 +49,6 @@ export function CartPage() {
     const pickupStoreRepository = createPickupStoreRepository()
     return new ListPickupStoresUseCase(pickupStoreRepository)
   }, [])
-  const getFeaturedProductsUseCase = useMemo(() => {
-    const productRepository = createProductRepository()
-    return new GetFeaturedProductsUseCase(productRepository)
-  }, [])
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const [checkoutErrorMessage, setCheckoutErrorMessage] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'courier' | null>(null)
@@ -67,32 +58,8 @@ export function CartPage() {
   const [pickupStoresErrorMessage, setPickupStoresErrorMessage] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [referenceFirstName, setReferenceFirstName] = useState('')
-  const [referenceLastName, setReferenceLastName] = useState('')
-  const [categoryProducts, setCategoryProducts] = useState<Product[]>([])
-
-  const categories = useMemo<CarouselCategory[]>(() => {
-    const summaries = new Map<string, CarouselCategory>()
-
-    categoryProducts.forEach((product) => {
-      const current = summaries.get(product.category)
-
-      if (!current) {
-        summaries.set(product.category, {
-          name: product.category,
-          count: 1,
-          imageUrl: product.imageUrl,
-        })
-        return
-      }
-
-      summaries.set(product.category, {
-        ...current,
-        count: current.count + 1,
-      })
-    })
-
-    return Array.from(summaries.values())
-  }, [categoryProducts])
+  const [referencePaternalLastName, setReferencePaternalLastName] = useState('')
+  const [referenceMaternalLastName, setReferenceMaternalLastName] = useState('')
 
   useEffect(() => {
     async function loadPickupStores() {
@@ -112,19 +79,6 @@ export function CartPage() {
     void loadPickupStores()
   }, [listPickupStoresUseCase])
 
-  useEffect(() => {
-    async function loadCategoryProducts() {
-      try {
-        setCategoryProducts(await getFeaturedProductsUseCase.execute())
-      } catch {
-        const fallbackRepository = new InMemoryProductRepository()
-        setCategoryProducts(await fallbackRepository.findFeatured())
-      }
-    }
-
-    void loadCategoryProducts()
-  }, [getFeaturedProductsUseCase])
-
   const selectedPickupStore = useMemo(
     () => pickupStores.find((store) => store.id === selectedPickupStoreId) ?? null,
     [pickupStores, selectedPickupStoreId],
@@ -139,7 +93,8 @@ export function CartPage() {
   const isCustomerInfoValid =
     customerPhone.trim().length >= 6 &&
     referenceFirstName.trim().length >= 2 &&
-    referenceLastName.trim().length >= 2
+    referencePaternalLastName.trim().length >= 2 &&
+    referenceMaternalLastName.trim().length >= 2
 
   const isCheckoutDisabled =
     cartItemsList.length === 0 ||
@@ -174,7 +129,8 @@ export function CartPage() {
       const checkoutCustomer: CheckoutCustomer = {
         phone: customerPhone.trim(),
         firstName: referenceFirstName.trim(),
-        lastName: referenceLastName.trim(),
+        paternalLastName: referencePaternalLastName.trim(),
+        maternalLastName: referenceMaternalLastName.trim(),
       }
 
       const checkoutLinks = await generateCheckoutUrlUseCase.execute(
@@ -190,7 +146,7 @@ export function CartPage() {
         shortSharedCartUrl: checkoutLinks.shortSharedCartUrl ?? undefined,
         customerPhone: checkoutCustomer.phone,
         referenceFirstName: checkoutCustomer.firstName,
-        referenceLastName: checkoutCustomer.lastName,
+        referenceLastName: `${checkoutCustomer.paternalLastName} ${checkoutCustomer.maternalLastName}`,
       })
       window.open(checkoutLinks.checkoutUrl, '_blank', 'noopener,noreferrer')
       clearCart()
@@ -216,6 +172,14 @@ export function CartPage() {
 
       <Container maxW="7xl" py={{ base: 5, md: 10 }} pb={{ base: 20, md: 10 }}>
         <VStack align="stretch" gap={{ base: 4, md: 8 }}>
+          <Box width="100%" maxW="100%" minW={0}>
+            <img
+              src="/banner_categories.jpeg"
+              alt="Lo que quieres, cuando quieres: envíos a todo el país"
+              style={{ display: 'block', width: '100%', maxWidth: '100%', height: 'auto' }}
+            />
+          </Box>
+
           <Box
             bg="rgba(255, 255, 255, 0.78)"
             border="1px solid"
@@ -224,28 +188,19 @@ export function CartPage() {
             p={{ base: 3, md: 5 }}
             boxShadow="0 12px 30px rgba(72, 33, 96, 0.1)"
           >
-            <Stack gap={4}>
-              <HStack justify="space-between" gap={3} flexWrap="wrap">
-                <Text color="#5c3275" fontWeight="extrabold" letterSpacing="0.06em" textTransform="uppercase" fontSize="sm">
-                  Sigue explorando
-                </Text>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  borderColor="#7b4e98"
-                  color="#5c3275"
-                  _hover={{ bg: '#f4e8ff' }}
-                  onClick={() => navigate('/')}
-                >
-                  <HomeIcon size={16} />
-                  Seguir comprando
-                </Button>
-              </HStack>
-              <CategoryCarousel
-                categories={categories}
-                onSelectCategory={(categoryName) => navigate(`/?category=${encodeURIComponent(categoryName)}`)}
-              />
-            </Stack>
+            <HStack justify="flex-end">
+              <Button
+                size="sm"
+                variant="outline"
+                borderColor="#7b4e98"
+                color="#5c3275"
+                _hover={{ bg: '#f4e8ff' }}
+                onClick={() => navigate('/')}
+              >
+                <HomeIcon size={16} />
+                Seguir comprando
+              </Button>
+            </HStack>
           </Box>
 
           {checkoutErrorMessage ? (
@@ -592,14 +547,20 @@ export function CartPage() {
                         bg="white"
                       />
                       <Input
-                        placeholder="Apellido"
-                        value={referenceLastName}
-                        onChange={(event) => setReferenceLastName(event.target.value)}
+                        placeholder="Apellido paterno"
+                        value={referencePaternalLastName}
+                        onChange={(event) => setReferencePaternalLastName(event.target.value)}
+                        bg="white"
+                      />
+                      <Input
+                        placeholder="Apellido materno"
+                        value={referenceMaternalLastName}
+                        onChange={(event) => setReferenceMaternalLastName(event.target.value)}
                         bg="white"
                       />
                       {!isCustomerInfoValid ? (
                         <Text color="#b91c1c" fontSize="xs">
-                          Completa celular, nombre y apellido para habilitar WhatsApp.
+                          Completa celular, nombre y ambos apellidos para habilitar WhatsApp.
                         </Text>
                       ) : null}
                     </VStack>

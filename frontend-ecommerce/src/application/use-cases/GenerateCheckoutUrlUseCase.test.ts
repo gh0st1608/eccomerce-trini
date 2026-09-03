@@ -31,7 +31,12 @@ describe('GenerateCheckoutUrlUseCase', () => {
         },
       ],
       { method: 'courier' },
-      { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+      {
+        phone: '51999999999',
+        firstName: 'Ana',
+        paternalLastName: 'Perez',
+        maternalLastName: 'Gomez',
+      },
     )
 
     expect(checkoutLinks.checkoutUrl).toContain('wa.me')
