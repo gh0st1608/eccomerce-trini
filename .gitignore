@@ -52,3 +52,5 @@ Thumbs.db
 *.suo
 *.swp
 *.swo
+
+postman/
