@@ -1,0 +1,11 @@
+# Infracost project config. Run via terraform/infracost/run-infracost.ps1 (or .sh),
+# which wraps the official infracost/infracost Docker image so no local install
+# is required. See https://www.infracost.io/docs/config_file/.
+version: 0.1
+
+projects:
+  - path: ..
+    name: trini-infra-local
+    terraform_var_files:
+      - environments/local.tfvars
+    usage_file: infracost/infracost-usage.yml

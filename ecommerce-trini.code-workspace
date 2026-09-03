@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "ecommerce"
+		},
+		{
+			"path": "admin"
+		},
+		{
+			"path": "frontend-ecommerce"
+		},
+		{
+			"path": "gateway"
+		}
+	],
+	"settings": {}
+}

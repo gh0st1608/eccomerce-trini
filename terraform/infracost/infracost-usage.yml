@@ -1,0 +1,39 @@
+# Usage-based estimates for resources whose Infracost price depends on traffic
+# (Lambda invocations, API Gateway requests, S3 storage/requests, CloudFront).
+# These are placeholder assumptions for a small storefront - adjust to match
+# real traffic once available. See https://www.infracost.io/docs/features/usage_based_resources/.
+version: 0.1
+
+resource_usage:
+  aws_lambda_function.ecommerce_api:
+    monthly_requests: 500000
+    request_duration_ms: 150
+
+  aws_lambda_function.admin_api:
+    monthly_requests: 100000
+    request_duration_ms: 200
+
+  aws_apigatewayv2_api.this:
+    monthly_requests: 600000
+
+  aws_s3_bucket.product_images:
+    storage_gb: 5
+    monthly_tier_1_requests: 1000
+    monthly_tier_2_requests: 20000
+
+  aws_s3_bucket.frontend:
+    storage_gb: 1
+    monthly_tier_1_requests: 100
+    monthly_tier_2_requests: 5000
+
+  aws_cloudfront_distribution.frontend[0]:
+    monthly_http_requests: 200000
+    monthly_https_requests: 400000
+    monthly_data_transfer_to_internet_gb:
+      us: 20
+
+  aws_cloudfront_distribution.product_images[0]:
+    monthly_http_requests: 50000
+    monthly_https_requests: 150000
+    monthly_data_transfer_to_internet_gb:
+      us: 10

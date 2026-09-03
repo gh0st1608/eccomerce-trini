@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C4 - CORS/PNA con Ngrok</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 32px;
+      color: #0f172a;
+      line-height: 1.5;
+    }
+    h1, h2 {
+      margin-bottom: 8px;
+    }
+    .section {
+      margin-bottom: 36px;
+      page-break-inside: avoid;
+    }
+    .note {
+      background: #f8fafc;
+      border-left: 4px solid #2563eb;
+      padding: 12px 14px;
+      margin-top: 12px;
+    }
+    .mermaid {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+      border-radius: 8px;
+    }
+    ul {
+      margin-top: 8px;
+    }
+  </style>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+  </script>
+</head>
+<body>
+  <h1>C4 - Analisis de CORS/PNA con Ngrok</h1>
+  <p>Proyecto: ecommerce-trini</p>
+
+  <div class="section">
+    <h2>C1 - Contexto del Sistema</h2>
+    <div class="mermaid">
+flowchart LR
+    U[Usuario en navegador]
+    NG[Ngrok Edge publico HTTPS]
+    FE[Frontend Vite]
+    BE1[Backend Ecommerce API local puerto 3000]
+    BE2[Backend Admin API local puerto 3001]
+
+    U -->|HTTPS| NG
+    NG -->|tunel| FE
+    FE -->|HTTP| BE1
+    FE -->|HTTP| BE2
+    </div>
+    <div class="note">El navegador entra por ngrok al frontend; luego el frontend reenvia a las APIs locales.</div>
+  </div>
+
+  <div class="section">
+    <h2>C2 - Contenedores: Caso A (Frontend en Docker, APIs en host local)</h2>
+    <div class="mermaid">
+flowchart TB
+    subgraph Internet
+        U[Browser usuario]
+        NGEdge[Ngrok dominio publico]
+    end
+
+    subgraph DockerCompose frontend-ecommerce
+        FEC[Contenedor Frontend Vite puerto 5173]
+        NGC[Contenedor Ngrok]
+    end
+
+    subgraph Host Windows
+        BE1[API Ecommerce localhost 3000]
+        BE2[API Admin localhost 3001]
+    end
+
+    U -->|HTTPS| NGEdge
+    NGEdge --> NGC
+    NGC -->|frontend:5173| FEC
+    FEC -->|proxy /api/v1 -> host.docker.internal:3000| BE1
+    FEC -->|proxy /api/v1/admin -> host.docker.internal:3001| BE2
+    </div>
+    <ul>
+      <li>Si el proxy usa localhost dentro del contenedor, apunta al contenedor y no al host.</li>
+      <li>Ese error de red termina como 502 Bad Gateway desde ngrok.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>C2 - Contenedores: Caso B (Frontend sin Docker, APIs en host local)</h2>
+    <div class="mermaid">
+flowchart TB
+    subgraph Host Windows
+        FEH[Proceso Vite local puerto 5173]
+        BE1[API Ecommerce localhost 3000]
+        BE2[API Admin localhost 3001]
+        NGL[Ngrok local]
+    end
+
+    U[Browser usuario] -->|HTTPS| NGL
+    NGL -->|tunel a localhost:5173| FEH
+    FEH -->|proxy /api/v1 -> localhost:3000| BE1
+    FEH -->|proxy /api/v1/admin -> localhost:3001| BE2
+    </div>
+    <ul>
+      <li>Aqui localhost si es el host real, por eso funciona.</li>
+      <li>Se mantiene mismo origen para el browser y se evita CORS/PNA.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>C3 - Componentes del Frontend</h2>
+    <div class="mermaid">
+flowchart LR
+    UI[HomePage y paginas React]
+    UC[Use Cases]
+    REPO[HttpProductRepository y repos admin]
+    HTTP[FetchHttpClient]
+    ENV[Config de env]
+    VITE[Vite Dev Server Proxy]
+    API1[Ecommerce API]
+    API2[Admin API]
+
+    UI --> UC
+    UC --> REPO
+    REPO --> HTTP
+    HTTP -->|base URL relativa /api/v1| VITE
+    ENV --> HTTP
+    VITE --> API1
+    VITE --> API2
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Mapa de Fallas</h2>
+    <div class="mermaid">
+flowchart TD
+    A[Frontend publico en ngrok] --> B{La app llama directo a http localhost 3000?}
+    B -- Si --> C[Browser bloquea por PNA loopback]
+    C --> D[Error de CORS con mensaje loopback]
+    B -- No, usa ruta relativa --> E{Proxy Vite apunta bien al backend?}
+    E -- No, usa localhost dentro de contenedor Docker --> F[Proxy no alcanza backend]
+    F --> G[502 Bad Gateway]
+    E -- Si, usa host.docker.internal en Docker o localhost en host --> H[Flujo correcto]
+    </div>
+  </div>
+</body>
+</html>

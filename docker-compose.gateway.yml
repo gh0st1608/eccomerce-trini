@@ -1,0 +1,112 @@
+services:
+  checkout-api:
+    build:
+      context: ./checkout
+      dockerfile: Dockerfile
+    profiles: ["backend","gateway"]
+    env_file:
+      - ./checkout/.env
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      admin-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  admin-api:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    profiles: ["backend","gateway"]
+    env_file:
+      - ./admin/.env
+    expose:
+      - "3001"
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend-ecommerce
+      dockerfile: Dockerfile
+    profiles: ["frontend","gateway"]
+    env_file:
+      - ./frontend-ecommerce/.env
+    environment:
+      VITE_ECOMMERCE_API_BASE_URL: /api/v1/checkout
+      VITE_ADMIN_API_BASE_URL: /api/v1/admin
+      VITE_PUBLIC_API_TOKEN: trini-public-readonly-token
+      VITE_DEV_PROXY_CHECKOUT_TARGET: http://checkout-api:3000
+      VITE_DEV_PROXY_ADMIN_TARGET: http://admin-api:3001
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    expose:
+      - "5173"
+    ports:
+      - "5173:5173"
+    depends_on:
+      checkout-api:
+        condition: service_healthy
+      admin-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  gateway:
+    image: nginx:1.27-alpine
+    profiles: ["gateway"]
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  localstack:
+    image: localstack/localstack:latest
+    profiles: ["localstack"]
+    environment:
+      SERVICES: s3,dynamodb,lambda,apigateway,iam,logs,sts,cloudwatch
+      # LocalStack Auth Token
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:?LOCALSTACK_AUTH_TOKEN must be set}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      # LocalStack's Lambda service runs each function in its own Docker container,
+      # so it needs access to the host's Docker daemon.
+      GATEWAY_LISTEN: 0.0.0.0:4566
+      #EDGE_PORT: 4566
+      #LAMBDA_EXECUTOR: docker
+      DOCKER_HOST: unix:///var/run/docker.sock
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    volumes:
+      - ./localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles: ["gateway"]
+    depends_on:
+      - gateway
+    command:
+      - http
+      - --log=stdout
+      - gateway:80
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Set NGROK_AUTHTOKEN in a root .env file or shell env}

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Mayo Collection logo">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="38%" r="70%">
+      <stop offset="0%" stop-color="#f4e8ff" />
+      <stop offset="55%" stop-color="#d5b8ee" />
+      <stop offset="100%" stop-color="#b697d3" />
+    </radialGradient>
+  </defs>
+  <circle cx="256" cy="256" r="248" fill="url(#g)" />
+  <g fill="none" stroke="#ffffff" stroke-width="4" opacity="0.95">
+    <path d="M134 136v136" />
+    <path d="M134 136h96" />
+    <path d="M378 136v136" />
+    <path d="M282 136h96" />
+  </g>
+  <g fill="#ffffff" text-anchor="middle">
+    <text x="256" y="268" font-family="Georgia, 'Times New Roman', serif" font-size="140" letter-spacing="2">M</text>
+    <text x="256" y="348" font-family="'Trebuchet MS', Arial, sans-serif" font-size="76" letter-spacing="20">MAYO</text>
+    <text x="256" y="395" font-family="'Trebuchet MS', Arial, sans-serif" font-size="38" letter-spacing="12">COLLECTION</text>
+  </g>
+</svg>
