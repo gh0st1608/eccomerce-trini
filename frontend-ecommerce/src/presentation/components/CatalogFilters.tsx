@@ -32,16 +32,22 @@ export function CatalogFilters({
     >
       <Stack gap={{ base: 3, md: 5 }}>
         <HStack justify="space-between">
-          <Heading size={{ base: 'sm', md: 'md' }} color="#2b123d">
+          <Heading size={{ base: 'sm', md: 'md' }} color="#000000" fontWeight="800">
             Filtros
           </Heading>
-          <Button size="xs" variant="ghost" onClick={onResetFilters}>
+          <Button
+            size="xs"
+            variant="ghost"
+            color="#000000"
+            fontWeight="800"
+            onClick={onResetFilters}
+          >
             Reset
           </Button>
         </HStack>
 
         <Stack gap={2}>
-          <Text fontWeight="semibold" color="#334155">
+          <Text fontWeight="800" color="#000000">
             Precio maximo
           </Text>
           <input
@@ -52,10 +58,12 @@ export function CatalogFilters({
             onChange={(event) => onMaxPriceChange(Number(event.target.value))}
           />
           <HStack justify="space-between">
-            <Text fontSize="sm" color="#64748b">
+            <Text fontSize="sm" color="#000000" fontWeight="800">
               ${minPrice}
             </Text>
-            <Badge colorPalette="purple">Hasta ${selectedMaxPrice}</Badge>
+            <Badge colorPalette="purple" color="#000000" fontWeight="800">
+              Hasta ${selectedMaxPrice}
+            </Badge>
           </HStack>
         </Stack>
 
@@ -64,6 +72,7 @@ export function CatalogFilters({
           variant={showFeaturedOnly ? 'solid' : 'outline'}
           bg={showFeaturedOnly ? '#7b4e98' : 'white'}
           color={showFeaturedOnly ? 'white' : '#6b3d84'}
+          fontWeight="800"
           borderColor="#7b4e98"
           _hover={showFeaturedOnly ? { bg: '#5c3275' } : { bg: '#f4eafa' }}
           onClick={onToggleFeaturedOnly}

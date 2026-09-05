@@ -135,7 +135,9 @@ export function CartPage() {
 
       const checkoutLinks = await generateCheckoutUrlUseCase.execute(
         checkoutItems,
-        deliveryMethod === 'pickup' ? { method: 'pickup', storeId: selectedPickupStoreId } : { method: 'courier' },
+        deliveryMethod === 'pickup'
+          ? { method: 'pickup', storeId: selectedPickupStoreId }
+          : { method: 'courier' },
         checkoutCustomer,
       )
       registerCheckoutOrder({
@@ -271,7 +273,12 @@ export function CartPage() {
                                 }}
                               />
                             ) : (
-                              <Text fontSize="xs" fontWeight="bold" color="#475569" letterSpacing="0.08em">
+                              <Text
+                                fontSize="xs"
+                                fontWeight="bold"
+                                color="#475569"
+                                letterSpacing="0.08em"
+                              >
                                 TRINI
                               </Text>
                             )}
@@ -283,7 +290,12 @@ export function CartPage() {
                                 <Text fontWeight="semibold" color="#0f172a" lineClamp={2}>
                                   {item.product.name}
                                 </Text>
-                                <Badge borderRadius="md" bg="#ffedd5" color="#c2410c" alignSelf="start">
+                                <Badge
+                                  borderRadius="md"
+                                  bg="#ffedd5"
+                                  color="#c2410c"
+                                  alignSelf="start"
+                                >
                                   Ultimo dia
                                 </Badge>
                                 <HStack gap={2} wrap="wrap">
@@ -318,12 +330,14 @@ export function CartPage() {
                               <Text color="#ea580c" fontWeight="bold" fontSize="xl">
                                 {formatCurrency(item.product.price)}
                               </Text>
-                              {item.product.originalPrice && item.product.originalPrice > item.product.price ? (
+                              {item.product.originalPrice &&
+                              item.product.originalPrice > item.product.price ? (
                                 <Text color="#94a3b8" textDecoration="line-through" fontSize="sm">
                                   {formatCurrency(item.product.originalPrice)}
                                 </Text>
                               ) : null}
-                              {typeof item.product.discountPercent === 'number' && item.product.discountPercent > 0 ? (
+                              {typeof item.product.discountPercent === 'number' &&
+                              item.product.discountPercent > 0 ? (
                                 <Badge bg="#fff7ed" color="#c2410c" borderRadius="full" px={2}>
                                   -{item.product.discountPercent}%
                                 </Badge>
@@ -361,7 +375,10 @@ export function CartPage() {
                                   size="xs"
                                   variant="outline"
                                   borderColor="#d8c4e3"
-                                  disabled={typeof item.product.stock === 'number' && item.quantity >= item.product.stock}
+                                  disabled={
+                                    typeof item.product.stock === 'number' &&
+                                    item.quantity >= item.product.stock
+                                  }
                                   onClick={() => increaseQuantity(item.lineId)}
                                 >
                                   <PlusIcon size={14} />
@@ -371,7 +388,11 @@ export function CartPage() {
 
                             <Box borderTop="1px solid" borderColor="#f1f5f9" pt={2}>
                               <HStack justify="space-between" gap={2} flexWrap="wrap">
-                                <Text color={item.isGift ? '#be185d' : '#64748b'} fontSize="xs" fontWeight="medium">
+                                <Text
+                                  color={item.isGift ? '#be185d' : '#64748b'}
+                                  fontSize="xs"
+                                  fontWeight="medium"
+                                >
                                   {item.isGift
                                     ? 'Esta línea se identifica como regalo.'
                                     : 'Marca unidades individuales como regalo.'}
@@ -406,61 +427,106 @@ export function CartPage() {
 
             <Box width={{ base: '100%', xl: '360px' }}>
               <Box
-                bg="rgba(255, 255, 255, 0.94)"
-                border="1px solid"
-                borderColor="blackAlpha.200"
+                bg="#58647d"
                 borderRadius="2xl"
-                p={{ base: 4, md: 6 }}
-                boxShadow="lg"
+                overflow="hidden"
+                boxShadow="0 18px 38px rgba(70, 82, 111, 0.22)"
                 position={{ base: 'static', xl: 'sticky' }}
                 top={{ xl: 24 }}
               >
-                <VStack align="stretch" gap={4}>
-                  <Heading size={{ base: 'sm', md: 'md' }} color="#17222f">
-                    Totales
-                  </Heading>
-                  <Separator />
-                  <HStack justify="space-between">
-                    <Text color="#334155">Subtotal</Text>
-                    <Text fontWeight="bold" fontSize="xl" color="#7b4e98">
-                      {formatCurrency(cartSubtotal)}
-                    </Text>
-                  </HStack>
+                <VStack align="stretch" gap={0}>
+                  <Box p={{ base: 4, md: 6 }}>
+                    <Heading size={{ base: 'sm', md: 'md' }} color="white" mb={4}>
+                      Resumen del pedido
+                    </Heading>
+                    <VStack align="stretch" gap={3}>
+                      <HStack justify="space-between">
+                        <Text color="white" fontWeight="700">
+                          Subtotal
+                        </Text>
+                        <Text fontWeight="800" color="white">
+                          {formatCurrency(cartSubtotal)}
+                        </Text>
+                      </HStack>
+                      <HStack justify="space-between">
+                        <Text color="white" fontWeight="700">
+                          Envio
+                        </Text>
+                        <Text color="#8df0c5" fontWeight="800">
+                          Gratis
+                        </Text>
+                      </HStack>
+                      <HStack justify="space-between">
+                        <Text color="white" fontWeight="700">
+                          Descuento
+                        </Text>
+                        <Text color="#ff9fc0" fontWeight="800">
+                          - {formatCurrency(0)}
+                        </Text>
+                      </HStack>
+                      <Separator borderColor="whiteAlpha.500" />
+                      <HStack justify="space-between" align="center">
+                        <Text color="white" fontWeight="800" fontSize="2xl">
+                          Total
+                        </Text>
+                        <Text fontWeight="800" fontSize="2xl" color="white">
+                          {formatCurrency(cartSubtotal)}
+                        </Text>
+                      </HStack>
+                    </VStack>
+                  </Box>
 
                   <Box
-                    border="1px solid"
-                    borderColor="blackAlpha.200"
-                    borderRadius="xl"
-                    p={3}
-                    bg="rgba(244, 232, 255, 0.45)"
+                    p={{ base: 4, md: 5 }}
+                    bg="#fff8fc"
+                    borderTop="1px solid"
+                    borderColor="#f7a4c5"
                   >
                     <VStack align="stretch" gap={3}>
-                      <Text fontWeight="semibold" color="#0f172a">
-                        Modalidad de entrega
-                      </Text>
-                      <Text color="#475569" fontSize="sm">
-                        Elige como quieres recibir tu pedido para habilitar el checkout por WhatsApp.
+                      <VStack align="stretch" gap={1}>
+                        <Text
+                          color="#b8326f"
+                          fontSize="xs"
+                          fontWeight="800"
+                          letterSpacing="0.12em"
+                          textTransform="uppercase"
+                        >
+                          Paso 1
+                        </Text>
+                        <Text fontWeight="800" color="#171017" fontSize="lg">
+                          Modalidad de entrega
+                        </Text>
+                      </VStack>
+                      <Text color="#475569" fontSize="sm" lineHeight="1.45">
+                        Elige como quieres recibir tu pedido para habilitar el checkout por
+                        WhatsApp.
                       </Text>
                       {hasGiftItems ? (
-                        <Box borderRadius="lg" bg="#fdf2f8" border="1px solid" borderColor="#f9a8d4" p={3}>
+                        <Box
+                          borderRadius="lg"
+                          bg="#fdf2f8"
+                          border="1px solid"
+                          borderColor="#f9a8d4"
+                          p={3}
+                        >
                           <Text color="#9d174d" fontWeight="semibold" fontSize="sm">
                             Pedido con regalos
                           </Text>
                           <Text color="#9d174d" fontSize="xs" mt={1}>
-                            Los regalos se envían al centro de recojo seleccionado. La entrega se coordina por WhatsApp,
-                            por lo que este pedido debe retirarse en tienda.
+                            Los regalos se envían al centro de recojo seleccionado. La entrega se
+                            coordina por WhatsApp, por lo que este pedido debe retirarse en tienda.
                           </Text>
                         </Box>
                       ) : null}
-                      <HStack align="stretch" gap={2}>
+                      <HStack align="stretch" gap={2} flexDirection={{ base: 'column', sm: 'row' }}>
                         <Button
                           flex="1"
                           size="sm"
                           variant={deliveryMethod === 'pickup' ? 'solid' : 'outline'}
-                          bg={deliveryMethod === 'pickup' ? '#7b4e98' : 'white'}
+                          bg={deliveryMethod === 'pickup' ? '#8f285e' : 'white'}
                           color={deliveryMethod === 'pickup' ? 'white' : '#513766'}
-                          borderColor="#7b4e98"
-                          _hover={{ bg: deliveryMethod === 'pickup' ? '#5c3275' : '#f8f1ff' }}
+                          borderColor="#8f285e"
+                          _hover={{ bg: deliveryMethod === 'pickup' ? '#731f4b' : '#fff0f5' }}
                           onClick={() => setDeliveryMethod('pickup')}
                         >
                           Retiro en tienda
@@ -469,10 +535,10 @@ export function CartPage() {
                           flex="1"
                           size="sm"
                           variant={deliveryMethod === 'courier' ? 'solid' : 'outline'}
-                          bg={deliveryMethod === 'courier' ? '#7b4e98' : 'white'}
+                          bg={deliveryMethod === 'courier' ? '#8f285e' : 'white'}
                           color={deliveryMethod === 'courier' ? 'white' : '#513766'}
-                          borderColor="#7b4e98"
-                          _hover={{ bg: deliveryMethod === 'courier' ? '#5c3275' : '#f8f1ff' }}
+                          borderColor="#8f285e"
+                          _hover={{ bg: deliveryMethod === 'courier' ? '#731f4b' : '#fff0f5' }}
                           disabled={hasGiftItems}
                           onClick={() => {
                             setDeliveryMethod('courier')
@@ -524,16 +590,26 @@ export function CartPage() {
                   </Box>
 
                   <Box
-                    border="1px solid"
-                    borderColor="blackAlpha.200"
-                    borderRadius="xl"
-                    p={3}
+                    p={{ base: 4, md: 5 }}
                     bg="white"
+                    borderTop="1px solid"
+                    borderColor="#f0d7e2"
                   >
                     <VStack align="stretch" gap={2}>
-                      <Text fontWeight="semibold" color="#0f172a">
-                        Datos del cliente
-                      </Text>
+                      <VStack align="stretch" gap={1} mb={1}>
+                        <Text
+                          color="#b8326f"
+                          fontSize="xs"
+                          fontWeight="800"
+                          letterSpacing="0.12em"
+                          textTransform="uppercase"
+                        >
+                          Paso 2
+                        </Text>
+                        <Text fontWeight="800" color="#0f172a" fontSize="lg">
+                          Datos del cliente
+                        </Text>
+                      </VStack>
                       <Input
                         placeholder="Celular de contacto"
                         value={customerPhone}
@@ -567,14 +643,41 @@ export function CartPage() {
                   </Box>
 
                   <Button
-                    bg="#7b4e98"
+                    alignSelf="center"
+                    bg="#f51b78"
                     color="white"
-                    _hover={{ bg: '#5c3275' }}
+                    border="none"
+                    outline="none"
+                    borderRadius="xl"
+                    width="calc(100% - 32px)"
+                    height={{ base: '58px', md: '66px' }}
+                    my={{ base: 4, md: 5 }}
+                    fontSize={{ base: 'md', md: 'lg' }}
+                    fontWeight="800"
+                    boxShadow="0 8px 18px rgba(191, 15, 88, 0.34)"
+                    _hover={{
+                      bg: '#d70d61',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 10px 22px rgba(191, 15, 88, 0.4)',
+                    }}
+                    _active={{
+                      transform: 'translateY(0)',
+                      boxShadow: '0 5px 12px rgba(191, 15, 88, 0.3)',
+                    }}
+                    _disabled={{
+                      bg: '#f51b78',
+                      color: 'white',
+                      opacity: 0.88,
+                      cursor: 'not-allowed',
+                      transform: 'none',
+                      boxShadow: 'none',
+                    }}
+                    transition="all 0.2s ease"
                     loading={isCheckoutLoading}
                     disabled={isCheckoutDisabled}
                     onClick={handleCheckout}
                   >
-                    Finalizar por WhatsApp
+                    Finalizar compra por WhatsApp
                   </Button>
                 </VStack>
               </Box>

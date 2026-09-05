@@ -51,7 +51,7 @@ export function StoreHeader({
             alignItems="center"
           >
             <GridItem>
-              <BrandLogo size={48} showText />
+              <BrandLogo size={54} showText />
             </GridItem>
 
             {showSearch ? (
@@ -87,7 +87,13 @@ export function StoreHeader({
 
             <GridItem>
               <HStack justify={{ base: 'start', lg: 'end' }} gap={2}>
-                <Button size={{ base: 'sm', md: 'md' }} variant="outline" borderColor="#d8c4e3" color="#4a1d63" disabled>
+                <Button
+                  size={{ base: 'sm', md: 'md' }}
+                  variant="outline"
+                  borderColor="#d8c4e3"
+                  color="#4a1d63"
+                  disabled
+                >
                   Cuenta
                 </Button>
                 <Button
@@ -109,10 +115,21 @@ export function StoreHeader({
         <Container maxW="7xl">
           <Flex justify="space-between" align="center" wrap="wrap" gap={{ base: 2, md: 3 }}>
             <HStack gap={2} wrap="wrap">
-              <Badge bg="#f0e3f7" color="#653d7d" px={{ base: 2.5, md: 3 }} py={{ base: 1, md: 1.5 }} borderRadius="full">
+              <Badge
+                bg="#f0e3f7"
+                color="#653d7d"
+                px={{ base: 2.5, md: 3 }}
+                py={{ base: 1, md: 1.5 }}
+                borderRadius="full"
+              >
                 Catalogo curado
               </Badge>
-              <Badge colorPalette="orange" px={{ base: 2.5, md: 3 }} py={{ base: 1, md: 1.5 }} borderRadius="full">
+              <Badge
+                colorPalette="orange"
+                px={{ base: 2.5, md: 3 }}
+                py={{ base: 1, md: 1.5 }}
+                borderRadius="full"
+              >
                 {filteredProducts} {resultLabel}
               </Badge>
             </HStack>
