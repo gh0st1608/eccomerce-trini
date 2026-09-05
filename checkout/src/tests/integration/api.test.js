@@ -32,7 +32,7 @@ describe('API integration', () => {
   test('POST /api/v1/checkout/whatsapp returns url', async () => {
     const response = await request(app).post('/api/v1/checkout/whatsapp').send({
       items: [{ productId: 'SKU-001', quantity: 1 }],
-      customer: { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+      customer: { phone: '999999999', firstName: 'Ana', lastName: 'Perez' },
       delivery: { method: 'courier' },
     });
     expect(response.status).toBe(201);
@@ -53,14 +53,14 @@ describe('API integration', () => {
   test('POST /api/v1/checkout/whatsapp validates pickup storeId against the store repository', async () => {
     const validPickup = await request(app).post('/api/v1/checkout/whatsapp').send({
       items: [{ productId: 'SKU-001', quantity: 1 }],
-      customer: { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+      customer: { phone: '999999999', firstName: 'Ana', lastName: 'Perez' },
       delivery: { method: 'pickup', storeId: 'store-001' },
     });
     expect(validPickup.status).toBe(201);
 
     const invalidPickup = await request(app).post('/api/v1/checkout/whatsapp').send({
       items: [{ productId: 'SKU-001', quantity: 1 }],
-      customer: { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+      customer: { phone: '999999999', firstName: 'Ana', lastName: 'Perez' },
       delivery: { method: 'pickup', storeId: 'store-missing' },
     });
     expect(invalidPickup.status).toBe(400);

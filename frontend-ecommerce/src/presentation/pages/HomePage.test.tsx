@@ -36,9 +36,7 @@ describe('HomePage', () => {
     expect((await screen.findAllByText(/chaqueta atlas/i)).length).toBeGreaterThan(0)
     expect((await screen.findAllByText(/pantalon skyline/i)).length).toBeGreaterThan(0)
 
-    const searchInput = screen.getByPlaceholderText(
-      /buscar por producto, categoria o descripcion/i,
-    )
+    const searchInput = screen.getByPlaceholderText(/buscar por producto, categoria o descripcion/i)
     await user.type(searchInput, 'orbit')
 
     expect((await screen.findAllByText(/camisa orbit/i)).length).toBeGreaterThan(0)
@@ -50,6 +48,13 @@ describe('HomePage', () => {
     expect(screen.getByText(/1 item\(s\) seleccionados/i)).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/camisa orbit se agrego al carrito/i)
     expect(screen.getByRole('button', { name: /finalizar por whatsapp/i })).toBeDisabled()
+
+    const phoneInput = screen.getByPlaceholderText(/celular de contacto/i)
+    const firstNameInput = screen.getByPlaceholderText(/^nombre$/i)
+    await user.type(phoneInput, '987-654-3210')
+    await user.type(firstNameInput, `Ana2${'b'.repeat(60)}`)
+    expect(phoneInput).toHaveValue('987654321')
+    expect(firstNameInput).toHaveValue(`Ana${'b'.repeat(47)}`)
 
     const detailLinks = await screen.findAllByRole('link', { name: /ver detalle/i })
     await user.click(detailLinks[0])
@@ -93,8 +98,10 @@ describe('HomePage', () => {
       { timeout: 10000 },
     )
 
-    const detailLinksAgain = await screen.findAllByRole('link', { name: /ver detalle/i })
-    await user.click(detailLinksAgain[1])
+    const setEclipseDetailLink = await screen.findByRole('link', {
+      name: /ver detalle de set eclipse/i,
+    })
+    await user.click(setEclipseDetailLink)
 
     await waitFor(
       () => {

@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+const customerNameSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(50)
+  .regex(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/);
+
 export const checkoutSchema = z.object({
   items: z
     .array(
@@ -12,16 +19,22 @@ export const checkoutSchema = z.object({
       }),
     )
     .min(1),
-  customer: z.object({
-    phone: z.string().trim().min(6).max(30),
-    firstName: z.string().trim().min(2).max(100),
-    lastName: z.string().trim().min(2).max(100).optional(),
-    paternalLastName: z.string().trim().min(2).max(100).optional(),
-    maternalLastName: z.string().trim().min(2).max(100).optional(),
-  }).refine(
-    (customer) => Boolean(customer.lastName || (customer.paternalLastName && customer.maternalLastName)),
-    { message: 'A complete customer last name is required', path: ['paternalLastName'] },
-  ),
+  customer: z
+    .object({
+      phone: z
+        .string()
+        .trim()
+        .regex(/^\d{6,9}$/),
+      firstName: customerNameSchema,
+      lastName: customerNameSchema.optional(),
+      paternalLastName: customerNameSchema.optional(),
+      maternalLastName: customerNameSchema.optional(),
+    })
+    .refine(
+      (customer) =>
+        Boolean(customer.lastName || (customer.paternalLastName && customer.maternalLastName)),
+      { message: 'A complete customer last name is required', path: ['paternalLastName'] },
+    ),
   delivery: z.discriminatedUnion('method', [
     z.object({
       method: z.literal('courier'),

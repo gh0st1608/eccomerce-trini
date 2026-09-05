@@ -32,7 +32,7 @@ describe('GenerateCheckoutUrlUseCase', () => {
       ],
       { method: 'courier' },
       {
-        phone: '51999999999',
+        phone: '999999999',
         firstName: 'Ana',
         paternalLastName: 'Perez',
         maternalLastName: 'Gomez',

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { AppProviders } from '@presentation/providers/AppProviders'
@@ -33,5 +33,8 @@ describe('ProductDetailPage', () => {
     await user.click(screen.getByRole('button', { name: /^s$/i }))
     expect(screen.getByRole('button', { name: /agregar al carrito/i })).toBeEnabled()
     expect(screen.getByText(/sku/i)).toBeInTheDocument()
+    const mobileGallery = screen.getByLabelText(/galeria de chaqueta atlas/i)
+    expect(within(mobileGallery).getAllByRole('img')).toHaveLength(4)
+    expect(mobileGallery).toHaveStyle({ overflowX: 'auto', scrollSnapType: 'x mandatory' })
   })
 })

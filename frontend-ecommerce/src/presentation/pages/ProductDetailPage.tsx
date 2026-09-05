@@ -137,10 +137,19 @@ export function ProductDetailPage() {
         <VStack align="stretch" gap={{ base: 4, md: 6 }}>
           <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
             <Stack gap={1}>
-              <Text letterSpacing="0.14em" fontWeight="bold" textTransform="uppercase" color="#0f766e">
+              <Text
+                letterSpacing="0.14em"
+                fontWeight="bold"
+                textTransform="uppercase"
+                color="#0f766e"
+              >
                 Detalle de producto
               </Text>
-              <Heading size={{ base: 'xl', md: '3xl' }} color="#0f172a" fontFamily="'Space Grotesk', sans-serif">
+              <Heading
+                size={{ base: 'xl', md: '3xl' }}
+                color="#0f172a"
+                fontFamily="'Space Grotesk', sans-serif"
+              >
                 {product?.name ?? 'Cargando detalle'}
               </Heading>
             </Stack>
@@ -176,24 +185,78 @@ export function ProductDetailPage() {
                   p={{ base: 3, md: 4 }}
                   boxShadow="lg"
                 >
-                  <Flex direction={{ base: 'column', md: 'row' }} gap={3} align="start">
+                  <Box
+                    display={{ base: 'block', md: 'none' }}
+                    position="relative"
+                    overflow="hidden"
+                    borderRadius="xl"
+                  >
+                    <Flex
+                      aria-label={`Galeria de ${product.name}`}
+                      overflowX="auto"
+                      scrollSnapType="x mandatory"
+                      overscrollBehaviorX="contain"
+                      scrollbarWidth="none"
+                    >
+                      {galleryImages.map((imageUrl, index) => (
+                        <Image
+                          key={`${imageUrl}-mobile-${index}`}
+                          src={imageUrl}
+                          alt={`${product.name} vista ${index + 1}`}
+                          flex="0 0 100%"
+                          width="100%"
+                          height="320px"
+                          objectFit="contain"
+                          bg="white"
+                          scrollSnapAlign="start"
+                        />
+                      ))}
+                    </Flex>
                     {galleryImages.length > 1 ? (
-                      <Stack direction={{ base: 'row', md: 'column' }} gap={3} overflowX="auto" maxW={{ base: '100%', md: '96px' }}>
+                      <Badge
+                        position="absolute"
+                        right={3}
+                        bottom={3}
+                        borderRadius="full"
+                        bg="whiteAlpha.900"
+                        color="#334155"
+                      >
+                        Desliza para ver mas
+                      </Badge>
+                    ) : null}
+                  </Box>
+
+                  <Flex
+                    display={{ base: 'none', md: 'flex' }}
+                    direction="row"
+                    gap={3}
+                    align="start"
+                  >
+                    {galleryImages.length > 1 ? (
+                      <Stack direction="column" gap={3} maxW="96px">
                         {galleryImages.map((imageUrl, index) => (
                           <Button
                             key={`${imageUrl}-${index}`}
                             variant="outline"
-                            borderColor={selectedImageIndex === index ? '#0f766e' : 'blackAlpha.200'}
+                            borderColor={
+                              selectedImageIndex === index ? '#0f766e' : 'blackAlpha.200'
+                            }
                             borderWidth={selectedImageIndex === index ? '2px' : '1px'}
                             p={0}
-                            minW={{ base: '72px', md: '88px' }}
-                            h={{ base: '72px', md: '88px' }}
+                            minW="88px"
+                            h="88px"
                             overflow="hidden"
                             borderRadius="xl"
                             bg="white"
                             onClick={() => setSelectedImageIndex(index)}
                           >
-                            <Image src={imageUrl} alt={`${product.name} vista ${index + 1}`} objectFit="cover" width="100%" height="100%" />
+                            <Image
+                              src={imageUrl}
+                              alt={`${product.name} vista ${index + 1}`}
+                              objectFit="contain"
+                              width="100%"
+                              height="100%"
+                            />
                           </Button>
                         ))}
                       </Stack>
@@ -204,8 +267,9 @@ export function ProductDetailPage() {
                         src={galleryImages[selectedImageIndex] ?? product.imageUrl}
                         alt={product.name}
                         width="100%"
-                        height={{ base: '320px', md: '540px' }}
-                        objectFit="cover"
+                        height="540px"
+                        objectFit="contain"
+                        bg="white"
                         borderRadius="xl"
                       />
                       {discountPercent ? (
@@ -270,7 +334,9 @@ export function ProductDetailPage() {
                         <HStack justify="space-between" color="#64748b" fontSize="sm">
                           <Text>Antes</Text>
                           <HStack gap={2}>
-                            <Text textDecoration="line-through">{formatCurrency(originalPrice)}</Text>
+                            <Text textDecoration="line-through">
+                              {formatCurrency(originalPrice)}
+                            </Text>
                             <Badge colorPalette="red" borderRadius="full">
                               Oferta
                             </Badge>
@@ -348,7 +414,11 @@ export function ProductDetailPage() {
                           variant="outline"
                           borderColor="#cbd5e1"
                           disabled={isSoldOut || selectedQuantity >= maxSelectableQuantity}
-                          onClick={() => setSelectedQuantity((current) => Math.min(maxSelectableQuantity, current + 1))}
+                          onClick={() =>
+                            setSelectedQuantity((current) =>
+                              Math.min(maxSelectableQuantity, current + 1),
+                            )
+                          }
                         >
                           +
                         </Button>
@@ -386,9 +456,18 @@ export function ProductDetailPage() {
                       color="white"
                       _hover={{ bg: '#115e59' }}
                       disabled={!selectedOptionsAreValid || isSoldOut}
-                      onClick={() => addToCart(product, selectedQuantity, { color: selectedColor, size: selectedSize })}
+                      onClick={() =>
+                        addToCart(product, selectedQuantity, {
+                          color: selectedColor,
+                          size: selectedSize,
+                        })
+                      }
                     >
-                      {isSoldOut ? 'Agotado' : selectedOptionsAreValid ? 'Agregar al carrito' : 'Elige tus opciones'}
+                      {isSoldOut
+                        ? 'Agotado'
+                        : selectedOptionsAreValid
+                          ? 'Agregar al carrito'
+                          : 'Elige tus opciones'}
                     </Button>
                   </VStack>
                 </Box>

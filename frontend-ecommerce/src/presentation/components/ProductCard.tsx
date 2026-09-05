@@ -47,11 +47,16 @@ export function ProductCard({
       >
         <Box position="relative">
           {detailTo ? (
-            <Link to={detailTo} aria-label={detailLabel} style={{ display: 'block', position: 'relative' }}>
+            <Link
+              to={detailTo}
+              aria-label={detailLabel}
+              style={{ display: 'block', position: 'relative' }}
+            >
               <Image
                 src={product.imageUrl}
                 alt={product.name}
-                objectFit="cover"
+                objectFit="contain"
+                bg="white"
                 width="100%"
                 height="92px"
               />
@@ -77,7 +82,8 @@ export function ProductCard({
             <Image
               src={product.imageUrl}
               alt={product.name}
-              objectFit="cover"
+              objectFit="contain"
+              bg="white"
               width="100%"
               height="92px"
             />
@@ -179,11 +185,16 @@ export function ProductCard({
     >
       <Box position="relative">
         {detailTo ? (
-          <Link to={detailTo} aria-label={detailLabel} style={{ display: 'block', position: 'relative' }}>
+          <Link
+            to={detailTo}
+            aria-label={detailLabel}
+            style={{ display: 'block', position: 'relative' }}
+          >
             <Image
               src={product.imageUrl}
               alt={product.name}
-              objectFit="cover"
+              objectFit="contain"
+              bg="white"
               width="100%"
               height={{ base: compact ? '132px' : '190px', md: '260px' }}
             />
@@ -209,7 +220,8 @@ export function ProductCard({
           <Image
             src={product.imageUrl}
             alt={product.name}
-            objectFit="cover"
+            objectFit="contain"
+            bg="white"
             width="100%"
             height={{ base: compact ? '132px' : '190px', md: '260px' }}
           />
@@ -243,12 +255,20 @@ export function ProductCard({
           </Text>
           <HStack justify="space-between" align="center">
             <Stack gap={0.5}>
-              <Text fontWeight="bold" fontSize={{ base: compact ? 'md' : 'lg', md: 'xl' }} color="#6b3d84">
+              <Text
+                fontWeight="bold"
+                fontSize={{ base: compact ? 'md' : 'lg', md: 'xl' }}
+                color="#6b3d84"
+              >
                 {formatCurrency(product.price)}
               </Text>
               {hasDiscount && referencePrice ? (
                 <HStack gap={2}>
-                  <Text fontSize={{ base: 'xs', md: 'sm' }} color="#64748b" textDecoration="line-through">
+                  <Text
+                    fontSize={{ base: 'xs', md: 'sm' }}
+                    color="#64748b"
+                    textDecoration="line-through"
+                  >
                     {formatCurrency(referencePrice)}
                   </Text>
                   <Badge bg="#f97316" color="white" borderRadius="sm" px={2} py={0.5}>

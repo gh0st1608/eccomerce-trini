@@ -15,7 +15,7 @@ describe('Middlewares', () => {
     const req = {
       body: {
         items: [{ productId: 'SKU-001', quantity: 1 }],
-        customer: { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+        customer: { phone: '999999999', firstName: 'Ana', lastName: 'Perez' },
         delivery: { method: 'courier' },
       },
     };

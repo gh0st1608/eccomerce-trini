@@ -30,6 +30,14 @@ import { ProductDetailPanel } from '@presentation/components/ProductDetailPanel'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
 import { formatCurrency } from '@shared/utils/currency'
+import {
+  CUSTOMER_NAME_MAX_LENGTH,
+  CUSTOMER_PHONE_MAX_LENGTH,
+  isValidCustomerName,
+  isValidCustomerPhone,
+  keepNameLetters,
+  keepPhoneDigits,
+} from '@shared/utils/customerValidation'
 import { registerCheckoutOrder } from '@shared/utils/adminOrderHistory'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -38,7 +46,9 @@ export function HomePage() {
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get('category') ?? 'Todos')
+  const [selectedCategory, setSelectedCategory] = useState(
+    () => searchParams.get('category') ?? 'Todos',
+  )
   const [selectedMaxPrice, setSelectedMaxPrice] = useState(0)
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false)
   const [sortMode, setSortMode] = useState<'featured' | 'priceAsc' | 'priceDesc'>('featured')
@@ -119,7 +129,11 @@ export function HomePage() {
       return filteredProducts[0] ?? null
     }
 
-    return filteredProducts.find((product) => product.id === selectedProduct.id) ?? filteredProducts[0] ?? null
+    return (
+      filteredProducts.find((product) => product.id === selectedProduct.id) ??
+      filteredProducts[0] ??
+      null
+    )
   }, [filteredProducts, selectedProduct])
 
   const groupedProductsByCategory = useMemo(() => {
@@ -145,10 +159,10 @@ export function HomePage() {
 
   const isCustomerInfoValid = useMemo(() => {
     return (
-      customerPhone.trim().length >= 6
-      && referenceFirstName.trim().length >= 2
-      && referencePaternalLastName.trim().length >= 2
-      && referenceMaternalLastName.trim().length >= 2
+      isValidCustomerPhone(customerPhone) &&
+      isValidCustomerName(referenceFirstName) &&
+      isValidCustomerName(referencePaternalLastName) &&
+      isValidCustomerName(referenceMaternalLastName)
     )
   }, [customerPhone, referenceFirstName, referencePaternalLastName, referenceMaternalLastName])
 
@@ -304,7 +318,8 @@ export function HomePage() {
                   Hasta 30% OFF en prendas seleccionadas
                 </Heading>
                 <Text color="#f4e8ff" fontSize={{ base: 'sm', md: 'lg' }} maxW="xl">
-                  Encuentra tus favoritos de Mayo Collection con precios especiales por tiempo limitado.
+                  Encuentra tus favoritos de Mayo Collection con precios especiales por tiempo
+                  limitado.
                 </Text>
                 <HStack gap={3} wrap="wrap">
                   <Button
@@ -369,10 +384,7 @@ export function HomePage() {
             </Alert.Root>
           ) : null}
 
-          <CategoryCarousel
-            categories={categories}
-            onSelectCategory={setSelectedCategory}
-          />
+          <CategoryCarousel categories={categories} onSelectCategory={setSelectedCategory} />
 
           <Flex direction={{ base: 'column', xl: 'row' }} gap={{ base: 4, md: 6 }} align="start">
             <Box width={{ base: '100%', xl: '280px' }}>
@@ -389,7 +401,12 @@ export function HomePage() {
 
             <Box flex="1" width="100%">
               <Stack gap={{ base: 3, md: 5 }}>
-                <HStack justify="space-between" align={{ base: 'start', md: 'center' }} flexWrap="wrap" gap={2}>
+                <HStack
+                  justify="space-between"
+                  align={{ base: 'start', md: 'center' }}
+                  flexWrap="wrap"
+                  gap={2}
+                >
                   <HStack gap={3} flexWrap="wrap">
                     <Text color="#475569" fontWeight="medium" fontSize={{ base: 'sm', md: 'md' }}>
                       {filteredProducts.length} producto(s) disponibles
@@ -478,7 +495,12 @@ export function HomePage() {
                     {groupedProductsByCategory.map((group) => (
                       <Box key={group.category}>
                         <HStack justify="space-between" mb={2}>
-                          <Text fontWeight="bold" color="#0f172a" textTransform="capitalize" fontSize={{ md: 'md' }}>
+                          <Text
+                            fontWeight="bold"
+                            color="#0f172a"
+                            textTransform="capitalize"
+                            fontSize={{ md: 'md' }}
+                          >
                             {group.category}
                           </Text>
                           <Text color="#64748b" fontSize="sm">
@@ -520,7 +542,9 @@ export function HomePage() {
             <Box display={{ base: 'none', xl: 'block' }} width={{ base: '100%', xl: '380px' }}>
               <ProductDetailPanel
                 product={visibleSelectedProduct}
-                quantityInCart={visibleSelectedProduct ? (quantityByProductId[visibleSelectedProduct.id] ?? 0) : 0}
+                quantityInCart={
+                  visibleSelectedProduct ? (quantityByProductId[visibleSelectedProduct.id] ?? 0) : 0
+                }
                 onAddToCart={addToCart}
               />
             </Box>
@@ -594,30 +618,40 @@ export function HomePage() {
                 <Input
                   placeholder="Celular de contacto"
                   value={customerPhone}
-                  onChange={(event) => setCustomerPhone(event.target.value)}
+                  onChange={(event) => setCustomerPhone(keepPhoneDigits(event.target.value))}
+                  inputMode="numeric"
+                  maxLength={CUSTOMER_PHONE_MAX_LENGTH}
+                  pattern="[0-9]*"
                   bg="white"
                 />
                 <Input
                   placeholder="Nombre"
                   value={referenceFirstName}
-                  onChange={(event) => setReferenceFirstName(event.target.value)}
+                  onChange={(event) => setReferenceFirstName(keepNameLetters(event.target.value))}
+                  maxLength={CUSTOMER_NAME_MAX_LENGTH}
                   bg="white"
                 />
                 <Input
                   placeholder="Apellido paterno"
                   value={referencePaternalLastName}
-                  onChange={(event) => setReferencePaternalLastName(event.target.value)}
+                  onChange={(event) =>
+                    setReferencePaternalLastName(keepNameLetters(event.target.value))
+                  }
+                  maxLength={CUSTOMER_NAME_MAX_LENGTH}
                   bg="white"
                 />
                 <Input
                   placeholder="Apellido materno"
                   value={referenceMaternalLastName}
-                  onChange={(event) => setReferenceMaternalLastName(event.target.value)}
+                  onChange={(event) =>
+                    setReferenceMaternalLastName(keepNameLetters(event.target.value))
+                  }
+                  maxLength={CUSTOMER_NAME_MAX_LENGTH}
                   bg="white"
                 />
                 {!isCustomerInfoValid ? (
                   <Text color="#b91c1c" fontSize="xs">
-                    Completa celular, nombre y ambos apellidos para habilitar WhatsApp.
+                    Ingresa un celular de hasta 9 digitos y nombres de hasta 50 letras.
                   </Text>
                 ) : null}
               </VStack>

@@ -21,6 +21,14 @@ import { createCheckoutGateway } from '@infrastructure/factories/createCheckoutG
 import { ListPickupStoresUseCase } from '@application/use-cases/ListPickupStoresUseCase'
 import { createPickupStoreRepository } from '@infrastructure/factories/createPickupStoreRepository'
 import { formatCurrency } from '@shared/utils/currency'
+import {
+  CUSTOMER_NAME_MAX_LENGTH,
+  CUSTOMER_PHONE_MAX_LENGTH,
+  isValidCustomerName,
+  isValidCustomerPhone,
+  keepNameLetters,
+  keepPhoneDigits,
+} from '@shared/utils/customerValidation'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { useNavigate } from 'react-router-dom'
@@ -91,10 +99,10 @@ export function CartPage() {
     (deliveryMethod === 'pickup' && selectedPickupStoreId.length > 0)
 
   const isCustomerInfoValid =
-    customerPhone.trim().length >= 6 &&
-    referenceFirstName.trim().length >= 2 &&
-    referencePaternalLastName.trim().length >= 2 &&
-    referenceMaternalLastName.trim().length >= 2
+    isValidCustomerPhone(customerPhone) &&
+    isValidCustomerName(referenceFirstName) &&
+    isValidCustomerName(referencePaternalLastName) &&
+    isValidCustomerName(referenceMaternalLastName)
 
   const isCheckoutDisabled =
     cartItemsList.length === 0 ||
@@ -613,30 +621,42 @@ export function CartPage() {
                       <Input
                         placeholder="Celular de contacto"
                         value={customerPhone}
-                        onChange={(event) => setCustomerPhone(event.target.value)}
+                        onChange={(event) => setCustomerPhone(keepPhoneDigits(event.target.value))}
+                        inputMode="numeric"
+                        maxLength={CUSTOMER_PHONE_MAX_LENGTH}
+                        pattern="[0-9]*"
                         bg="white"
                       />
                       <Input
                         placeholder="Nombre"
                         value={referenceFirstName}
-                        onChange={(event) => setReferenceFirstName(event.target.value)}
+                        onChange={(event) =>
+                          setReferenceFirstName(keepNameLetters(event.target.value))
+                        }
+                        maxLength={CUSTOMER_NAME_MAX_LENGTH}
                         bg="white"
                       />
                       <Input
                         placeholder="Apellido paterno"
                         value={referencePaternalLastName}
-                        onChange={(event) => setReferencePaternalLastName(event.target.value)}
+                        onChange={(event) =>
+                          setReferencePaternalLastName(keepNameLetters(event.target.value))
+                        }
+                        maxLength={CUSTOMER_NAME_MAX_LENGTH}
                         bg="white"
                       />
                       <Input
                         placeholder="Apellido materno"
                         value={referenceMaternalLastName}
-                        onChange={(event) => setReferenceMaternalLastName(event.target.value)}
+                        onChange={(event) =>
+                          setReferenceMaternalLastName(keepNameLetters(event.target.value))
+                        }
+                        maxLength={CUSTOMER_NAME_MAX_LENGTH}
                         bg="white"
                       />
                       {!isCustomerInfoValid ? (
                         <Text color="#b91c1c" fontSize="xs">
-                          Completa celular, nombre y ambos apellidos para habilitar WhatsApp.
+                          Ingresa un celular de hasta 9 digitos y nombres de hasta 50 letras.
                         </Text>
                       ) : null}
                     </VStack>

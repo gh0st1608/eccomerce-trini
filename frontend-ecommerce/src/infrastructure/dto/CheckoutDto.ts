@@ -11,10 +11,28 @@ export const checkoutRequestSchema = z.object({
     }),
   ),
   customer: z.object({
-    phone: z.string().trim().min(6).max(30),
-    firstName: z.string().trim().min(2).max(100),
-    paternalLastName: z.string().trim().min(2).max(100),
-    maternalLastName: z.string().trim().min(2).max(100),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\d{6,9}$/),
+    firstName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(50)
+      .regex(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/),
+    paternalLastName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(50)
+      .regex(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/),
+    maternalLastName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(50)
+      .regex(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/),
   }),
   delivery: z.discriminatedUnion('method', [
     z.object({ method: z.literal('courier') }),

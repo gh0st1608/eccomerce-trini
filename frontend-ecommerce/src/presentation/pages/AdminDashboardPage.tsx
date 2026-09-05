@@ -11,6 +11,7 @@ import {
   Input,
   Separator,
   Text,
+  Textarea,
   VStack,
 } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
@@ -42,6 +43,11 @@ import {
 } from '@shared/utils/adminOrderHistory'
 import { BrandLogo } from '@presentation/components/BrandLogo'
 import { formatCurrency } from '@shared/utils/currency'
+import {
+  updateOfferFromDiscount,
+  updateOfferFromOriginalPrice,
+  updateOfferFromPrice,
+} from '@shared/utils/offerPricing'
 
 type AdminSection = 'products' | 'categories' | 'stores' | 'orders'
 type ModalTone = 'success' | 'error' | 'info'
@@ -435,7 +441,10 @@ type ProductValidationResult = {
   errors: ProductFormErrorMap
 }
 
-function validateProductPayload(payload: CreateAdminProductInput): ProductValidationResult {
+function validateProductPayload(
+  payload: CreateAdminProductInput,
+  isProductOnOffer = false,
+): ProductValidationResult {
   const errors: ProductFormErrorMap = {}
   const setIndexedError = (
     section: 'attributesByIndex' | 'pricesByIndex' | 'variantsByIndex' | 'storeAvailabilityByIndex',
@@ -476,11 +485,19 @@ function validateProductPayload(payload: CreateAdminProductInput): ProductValida
     errors.originalPrice = 'El precio original no puede ser menor al precio actual.'
   }
 
+  if (isProductOnOffer && (!payload.originalPrice || payload.originalPrice <= payload.price)) {
+    errors.originalPrice = 'Ingresa un precio original mayor al precio actual.'
+  }
+
   if (
     payload.discountPercent !== undefined
     && (payload.discountPercent < 0 || payload.discountPercent > 90)
   ) {
     errors.discountPercent = 'El descuento principal debe estar entre 0 y 90.'
+  }
+
+  if (isProductOnOffer && (!payload.discountPercent || payload.discountPercent <= 0)) {
+    errors.discountPercent = 'Ingresa un descuento entre 1 y 90.'
   }
 
   const seenStoreIds = new Set<string>()
@@ -668,6 +685,7 @@ export function AdminDashboardPage() {
 
   const [productForm, setProductForm] = useState<CreateAdminProductInput>(defaultProductForm)
   const [productFormErrors, setProductFormErrors] = useState<ProductFormErrorMap>({})
+    const [isProductOnOffer, setIsProductOnOffer] = useState(false)
   const [categoryForm, setCategoryForm] = useState<CreateAdminCategoryInput>(defaultCategoryForm)
   const [storeForm, setStoreForm] = useState<CreateAdminStoreInput>(defaultStoreForm)
 
@@ -1015,12 +1033,19 @@ export function AdminDashboardPage() {
   function openCreateProductModal() {
     setProductFormErrors({})
     setProductForm(defaultProductForm)
+      setIsProductOnOffer(false)
     setIsStoreAvailabilityModalOpen(false)
     setIsVariantsModalOpen(false)
     setProductEditor({ isOpen: true, mode: 'create', productId: null })
   }
 
   function openUpdateProductModal(product: AdminProduct) {
+        setIsProductOnOffer(
+          Boolean(
+            (product.originalPrice && product.originalPrice > product.price)
+            || (product.discountPercent && product.discountPercent > 0),
+          ),
+        )
     setProductFormErrors({})
     setProductForm({
       name: product.name,
@@ -1065,7 +1090,7 @@ export function AdminDashboardPage() {
       setIsSubmitting(true)
       setErrorMessage('')
       const normalizedPayload = normalizeProductPayload(productForm)
-      const validation = validateProductPayload(normalizedPayload)
+      const validation = validateProductPayload(normalizedPayload, isProductOnOffer)
 
       if (!validation.isValid) {
         setProductFormErrors(validation.errors)
@@ -1090,6 +1115,7 @@ export function AdminDashboardPage() {
       }
 
       setProductEditor({ isOpen: false, mode: 'create', productId: null })
+      setIsProductOnOffer(false)
       setProductForm(defaultProductForm)
       setProductFormErrors({})
     } catch (error) {
@@ -2024,6 +2050,7 @@ export function AdminDashboardPage() {
         title={productEditor.mode === 'create' ? 'Agregar producto' : 'Actualizar producto'}
         onClose={() => {
           setProductFormErrors({})
+          setIsProductOnOffer(false)
           setIsStoreAvailabilityModalOpen(false)
           setIsVariantsModalOpen(false)
           setProductEditor({ isOpen: false, mode: 'create', productId: null })
@@ -2139,10 +2166,14 @@ export function AdminDashboardPage() {
           </FormField>
 
           <FormField label="Descripcion">
-            <Input
+            <Textarea
               placeholder="Describe el producto en pocas lineas"
               value={productForm.description}
               onChange={(event) => setProductForm((prev) => ({ ...prev, description: event.target.value }))}
+              minH="160px"
+              maxH="320px"
+              resize="vertical"
+              overflowY="auto"
             />
           </FormField>
 
@@ -2321,48 +2352,92 @@ export function AdminDashboardPage() {
             </FormField>
           </HStack>
 
+          <Box border="1px solid" borderColor="#e2e8f0" borderRadius="lg" p={3} bg="#f8fafc">
+            <HStack justify="space-between" align="center" gap={3} flexWrap="wrap">
+              <VStack align="start" gap={0}>
+                <Text fontWeight="semibold" color="#0f172a">Con oferta</Text>
+                <Text fontSize="xs" color="#64748b">Activa el precio original y el descuento automatico.</Text>
+              </VStack>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  aria-label="Con oferta"
+                  checked={isProductOnOffer}
+                  onChange={(event) => {
+                    const isChecked = event.target.checked
+                    setIsProductOnOffer(isChecked)
+                    if (!isChecked) {
+                      setProductForm((prev) => ({
+                        ...prev,
+                        originalPrice: undefined,
+                        discountPercent: undefined,
+                      }))
+                    }
+                  }}
+                />
+                <Text fontSize="sm" fontWeight="semibold">{isProductOnOffer ? 'Si' : 'No'}</Text>
+              </label>
+            </HStack>
+          </Box>
+
           <HStack gap={3} align="stretch" flexWrap="wrap">
-            <FormField label="Precio actual" error={productFormErrors.price}>
+            <FormField label="Precio actual" helper="Precio que paga el cliente." error={productFormErrors.price}>
               <Input
                 borderColor={productFormErrors.price ? '#b91c1c' : undefined}
                 type="number"
+                min="0"
+                step="0.01"
                 placeholder="0"
                 value={String(productForm.price)}
-                onChange={(event) => setProductForm((prev) => ({ ...prev, price: Number(event.target.value) }))}
+                onChange={(event) => {
+                  const price = Number(event.target.value)
+                  setProductForm((prev) => (
+                    isProductOnOffer
+                      ? { ...prev, ...updateOfferFromPrice(prev, price) }
+                      : { ...prev, price }
+                  ))
+                }}
               />
             </FormField>
-            <FormField label="Precio original" helper="Opcional. Mayor que el precio actual cuando hay oferta." error={productFormErrors.originalPrice}>
+            <FormField label="Precio original" helper="Precio regular antes de la oferta." error={productFormErrors.originalPrice}>
               <Input
                 borderColor={productFormErrors.originalPrice ? '#b91c1c' : undefined}
                 type="number"
-                placeholder="Opcional"
+                min="0"
+                step="0.01"
+                disabled={!isProductOnOffer}
+                placeholder={isProductOnOffer ? '0' : 'Activa Con oferta'}
                 value={productForm.originalPrice === undefined ? '' : String(productForm.originalPrice)}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const originalPrice = event.target.value.trim().length === 0
+                    ? undefined
+                    : Number(event.target.value)
                   setProductForm((prev) => ({
                     ...prev,
-                    originalPrice:
-                      event.target.value.trim().length === 0
-                        ? undefined
-                        : Number(event.target.value),
+                    ...updateOfferFromOriginalPrice(prev, originalPrice),
                   }))
-                }
+                }}
               />
             </FormField>
-            <FormField label="Descuento (%)" helper="Opcional. Valor entre 0 y 100." error={productFormErrors.discountPercent}>
+            <FormField label="Descuento (%)" helper="Se calcula con los precios o completa el precio faltante." error={productFormErrors.discountPercent}>
               <Input
                 borderColor={productFormErrors.discountPercent ? '#b91c1c' : undefined}
                 type="number"
-                placeholder="Opcional"
+                min="1"
+                max="90"
+                step="1"
+                disabled={!isProductOnOffer}
+                placeholder={isProductOnOffer ? 'Ej. 20' : 'Activa Con oferta'}
                 value={productForm.discountPercent === undefined ? '' : String(productForm.discountPercent)}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const discountPercent = event.target.value.trim().length === 0
+                    ? undefined
+                    : Number(event.target.value)
                   setProductForm((prev) => ({
                     ...prev,
-                    discountPercent:
-                      event.target.value.trim().length === 0
-                        ? undefined
-                        : Number(event.target.value),
+                    ...updateOfferFromDiscount(prev, discountPercent),
                   }))
-                }
+                }}
               />
             </FormField>
           </HStack>
@@ -2757,6 +2832,7 @@ export function AdminDashboardPage() {
               onClick={() => {
                 setProductFormErrors({})
                 setProductForm(defaultProductForm)
+                setIsProductOnOffer(false)
                 setIsStoreAvailabilityModalOpen(false)
                 setIsVariantsModalOpen(false)
                 setProductEditor({ isOpen: false, mode: 'create', productId: null })

@@ -20,9 +20,24 @@ describe('Utils and Validation', () => {
   test('checkout schema accepts valid payload', () => {
     const parsed = checkoutSchema.parse({
       items: [{ productId: 'SKU-001', quantity: 1 }],
-          delivery: { method: 'courier' },
-          customer: { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+      delivery: { method: 'courier' },
+      customer: { phone: '999999999', firstName: 'Ana', lastName: 'Perez' },
     });
     expect(parsed.items.length).toBe(1);
+  });
+
+  test.each([
+    { phone: '9999999990', firstName: 'Ana', lastName: 'Perez' },
+    { phone: '99999A999', firstName: 'Ana', lastName: 'Perez' },
+    { phone: '999999999', firstName: 'Ana2', lastName: 'Perez' },
+    { phone: '999999999', firstName: 'Ana', lastName: 'P'.repeat(51) },
+  ])('checkout schema rejects invalid customer data: %o', (customer) => {
+    expect(() =>
+      checkoutSchema.parse({
+        items: [{ productId: 'SKU-001', quantity: 1 }],
+        delivery: { method: 'courier' },
+        customer,
+      }),
+    ).toThrow();
   });
 });
