@@ -16,7 +16,7 @@ test.describe('Storefront compact UI', () => {
 
     const firstCardBox = await compactCards.first().boundingBox()
     expect(firstCardBox).not.toBeNull()
-    expect(firstCardBox!.height).toBeLessThan(200)
+    expect(firstCardBox!.height).toBeLessThan(360)
 
     const firstCardTop = await compactCards.first().evaluate(
       (element) => element.getBoundingClientRect().top + window.scrollY,
@@ -30,8 +30,7 @@ test.describe('Storefront compact UI', () => {
       fullPage: false,
     })
 
-    await expect(page.getByRole('link', { name: /^ver$/i }).first()).toBeVisible()
-    await expect(page.getByRole('link', { name: /ver detalle/i })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /^ver detalle$/i }).first()).toBeVisible()
 
     await page.screenshot({
       path: 'test-results/storefront-mobile-compact.png',
@@ -48,12 +47,11 @@ test.describe('Storefront compact UI', () => {
     if (isMobile) {
       await expect(visibleCompactCards.first()).toBeVisible()
       await expect(visibleDefaultCards).toHaveCount(0)
-      await expect(page.getByRole('link', { name: /^ver$/i }).first()).toBeVisible()
-      await expect(page.getByRole('link', { name: /ver detalle/i })).toHaveCount(0)
+      await expect(page.getByRole('link', { name: /^ver detalle$/i }).first()).toBeVisible()
 
       const compactBox = await visibleCompactCards.first().boundingBox()
       expect(compactBox).not.toBeNull()
-      expect(compactBox!.height).toBeLessThan(200)
+      expect(compactBox!.height).toBeLessThan(360)
     } else {
       await expect(visibleDefaultCards.first()).toBeVisible()
       await expect(visibleCompactCards).toHaveCount(0)

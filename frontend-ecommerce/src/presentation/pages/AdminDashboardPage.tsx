@@ -48,6 +48,7 @@ import {
   updateOfferFromOriginalPrice,
   updateOfferFromPrice,
 } from '@shared/utils/offerPricing'
+import { normalizeProductImages } from '@shared/utils/productImageNormalization'
 
 type AdminSection = 'products' | 'categories' | 'stores' | 'orders'
 type ModalTone = 'success' | 'error' | 'info'
@@ -242,28 +243,6 @@ function parseVariantAttributes(value: string): Array<{ name: string; value: str
       return { name, value: attrValue }
     })
     .filter((entry) => entry.name.length > 0 && entry.value.length > 0)
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result
-      if (typeof result === 'string') {
-        resolve(result)
-        return
-      }
-
-      reject(new Error('No se pudo leer el archivo seleccionado.'))
-    }
-    reader.onerror = () => reject(new Error('No se pudo leer el archivo seleccionado.'))
-    reader.readAsDataURL(file)
-  })
-}
-
-async function filesToDataUrls(files: FileList | File[]): Promise<string[]> {
-  const fileArray = Array.from(files)
-  return Promise.all(fileArray.map((file) => fileToDataUrl(file)))
 }
 
 function isHttpImageReference(value: string | undefined): boolean {
@@ -928,7 +907,7 @@ export function AdminDashboardPage() {
     }
 
     try {
-      const [dataUrl] = await filesToDataUrls(files)
+      const [dataUrl] = await normalizeProductImages(files)
       if (!dataUrl) {
         return
       }
@@ -937,7 +916,7 @@ export function AdminDashboardPage() {
         ...prev,
         imageUrl: dataUrl,
       }))
-      openFeedback('info', 'Imagen principal cargada', 'Se usara esta imagen para subirla al bucket al guardar el producto.')
+      openFeedback('info', 'Imagen principal normalizada', 'La imagen se recorto a 4:5 y se optimizo para subirla al guardar el producto.')
     } catch {
       openFeedback('error', 'Carga de imagen', 'No se pudo procesar la imagen principal seleccionada.')
     }
@@ -949,12 +928,12 @@ export function AdminDashboardPage() {
     }
 
     try {
-      const dataUrls = await filesToDataUrls(files)
+      const dataUrls = await normalizeProductImages(files)
       setProductForm((prev) => ({
         ...prev,
         images: [...(prev.images ?? []), ...dataUrls],
       }))
-      openFeedback('info', 'Galeria actualizada', `Se agregaron ${dataUrls.length} imagen(es) para subir al bucket.`)
+      openFeedback('info', 'Galeria normalizada', `Se recortaron y optimizaron ${dataUrls.length} imagen(es) para subir al bucket.`)
     } catch {
       openFeedback('error', 'Carga de imagenes', 'No se pudieron procesar las imagenes de galeria seleccionadas.')
     }
@@ -966,7 +945,7 @@ export function AdminDashboardPage() {
     }
 
     try {
-      const [dataUrl] = await filesToDataUrls(files)
+      const [dataUrl] = await normalizeProductImages(files)
       if (!dataUrl) {
         return
       }
@@ -977,7 +956,7 @@ export function AdminDashboardPage() {
           entryIndex === index ? { ...entry, imageUrl: dataUrl } : entry,
         ),
       }))
-      openFeedback('info', 'Imagen de variante cargada', `La variante ${index + 1} usara esta imagen al guardar.`)
+      openFeedback('info', 'Imagen de variante normalizada', `La variante ${index + 1} usara una imagen 4:5 optimizada al guardar.`)
     } catch {
       openFeedback('error', 'Carga de variante', 'No se pudo procesar la imagen de variante seleccionada.')
     }
@@ -2193,7 +2172,7 @@ export function AdminDashboardPage() {
                 }}
               />
               <Text fontSize="xs" color="#64748b">
-                Puedes pegar una URL o seleccionar un archivo para subirlo al bucket al guardar.
+                Los archivos se recortan al centro en formato 4:5 y se optimizan como WebP.
               </Text>
               {isHttpImageReference(productForm.imageUrl) ? (
                 <Box border="1px solid" borderColor="#e2e8f0" borderRadius="lg" p={2} bg="#f8fafc">
@@ -2251,7 +2230,7 @@ export function AdminDashboardPage() {
                   }}
                 />
                 <Text fontSize="xs" color="#64748b">
-                  Tambien puedes seleccionar varias imagenes desde tu equipo.
+                  Las imagenes se recortan al centro en formato 4:5 y se optimizan como WebP.
                 </Text>
                 {(productForm.images ?? []).length > 0 ? (
                   <VStack align="stretch" gap={2}>

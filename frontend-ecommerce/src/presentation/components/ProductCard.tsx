@@ -55,10 +55,11 @@ export function ProductCard({
               <Image
                 src={product.imageUrl}
                 alt={product.name}
-                objectFit="contain"
+                objectFit="cover"
+                objectPosition="center"
                 bg="white"
                 width="100%"
-                height="92px"
+                aspectRatio="4 / 5"
               />
               <Box
                 position="absolute"
@@ -82,10 +83,11 @@ export function ProductCard({
             <Image
               src={product.imageUrl}
               alt={product.name}
-              objectFit="contain"
+              objectFit="cover"
+              objectPosition="center"
               bg="white"
               width="100%"
-              height="92px"
+              aspectRatio="4 / 5"
             />
           )}
           <Badge
@@ -193,10 +195,11 @@ export function ProductCard({
             <Image
               src={product.imageUrl}
               alt={product.name}
-              objectFit="contain"
+              objectFit="cover"
+              objectPosition="center"
               bg="white"
               width="100%"
-              height={{ base: compact ? '132px' : '190px', md: '260px' }}
+              aspectRatio="4 / 5"
             />
             <Box
               position="absolute"
@@ -220,10 +223,11 @@ export function ProductCard({
           <Image
             src={product.imageUrl}
             alt={product.name}
-            objectFit="contain"
+            objectFit="cover"
+            objectPosition="center"
             bg="white"
             width="100%"
-            height={{ base: compact ? '132px' : '190px', md: '260px' }}
+            aspectRatio="4 / 5"
           />
         )}
         <Badge
