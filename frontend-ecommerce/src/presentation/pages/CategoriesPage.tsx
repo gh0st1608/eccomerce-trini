@@ -108,6 +108,14 @@ export function CategoriesPage() {
                 gap={1}
                 width={{ base: '104px', sm: '132px', md: '220px' }}
                 flexShrink={0}
+                minH={{ base: '500px', md: '560px' }}
+                bg="white"
+                py={2}
+                border="1px solid"
+                borderColor="#eadff0"
+                borderRadius="md"
+                boxShadow="0 6px 18px rgba(74, 29, 99, 0.06)"
+                overflow="hidden"
                 position="sticky"
                 top={{ base: '72px', md: '96px' }}
               >
