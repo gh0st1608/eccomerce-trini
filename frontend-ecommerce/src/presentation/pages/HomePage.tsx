@@ -344,7 +344,7 @@ export function HomePage() {
                       color={sortMode === 'priceAsc' ? 'white' : '#513766'}
                       onClick={() => setSortMode('priceAsc')}
                     >
-                      Precio +
+                      Menor precio
                     </Button>
                     <Button
                       size={{ base: 'xs', md: 'sm' }}
@@ -353,7 +353,7 @@ export function HomePage() {
                       color={sortMode === 'priceDesc' ? 'white' : '#513766'}
                       onClick={() => setSortMode('priceDesc')}
                     >
-                      Precio -
+                      Mayor precio
                     </Button>
                   </HStack>
                 </HStack>
@@ -374,7 +374,7 @@ export function HomePage() {
                   >
                     <Text color="#475569">
                       No encontramos resultados con los filtros actuales. Ajusta la busqueda o usa
-                      Reset.
+                      Limpiar.
                     </Text>
                   </Box>
                 ) : null}

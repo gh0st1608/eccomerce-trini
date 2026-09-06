@@ -23,6 +23,7 @@ import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
 import { formatCurrency } from '@shared/utils/currency'
+import { getProductGalleryImages } from '@shared/utils/productGallery'
 
 export function ProductDetailPage() {
   const navigate = useNavigate()
@@ -55,8 +56,7 @@ export function ProductDetailPage() {
       return []
     }
 
-    const images = product.images?.length ? product.images : [product.imageUrl]
-    return Array.from(new Set(images.filter(Boolean)))
+    return getProductGalleryImages(product)
   }, [product])
 
   const hasColorOptions = Boolean(product?.colors?.length)
@@ -444,7 +444,9 @@ export function ProductDetailPage() {
                     <HStack justify="space-between">
                       <Text color="#475569">Moneda</Text>
                       <Text fontWeight="semibold" color="#0f172a">
-                        {product.currency ?? 'PEN'}
+                        {!product.currency || product.currency === 'PEN'
+                          ? 'Soles (PEN)'
+                          : product.currency}
                       </Text>
                     </HStack>
 

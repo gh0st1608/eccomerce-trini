@@ -1,4 +1,5 @@
 import { Badge, Box, Button, Heading, HStack, Stack, Text } from '@chakra-ui/react'
+import { formatCurrency } from '@shared/utils/currency'
 
 interface CatalogFiltersProps {
   minPrice: number
@@ -42,7 +43,7 @@ export function CatalogFilters({
             fontWeight="800"
             onClick={onResetFilters}
           >
-            Reset
+            Limpiar
           </Button>
         </HStack>
 
@@ -59,10 +60,10 @@ export function CatalogFilters({
           />
           <HStack justify="space-between">
             <Text fontSize="sm" color="#000000" fontWeight="800">
-              ${minPrice}
+              {formatCurrency(minPrice)}
             </Text>
             <Badge colorPalette="purple" color="#000000" fontWeight="800">
-              Hasta ${selectedMaxPrice}
+              Hasta {formatCurrency(selectedMaxPrice)}
             </Badge>
           </HStack>
         </Stack>
