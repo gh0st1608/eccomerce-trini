@@ -7,19 +7,13 @@ import {
   Flex,
   Heading,
   HStack,
-  Input,
   SimpleGrid,
-  Separator,
   Stack,
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { GenerateCheckoutUrlUseCase } from '@application/use-cases/GenerateCheckoutUrlUseCase'
 import { GetFeaturedProductsUseCase } from '@application/use-cases/GetFeaturedProductsUseCase'
-import type { CheckoutItem } from '@domain/entities/CheckoutItem'
-import type { CheckoutCustomer } from '@domain/entities/CheckoutCustomer'
 import type { Product } from '@domain/entities/Product'
-import { createCheckoutGateway } from '@infrastructure/factories/createCheckoutGateway'
 import { createProductRepository } from '@infrastructure/factories/createProductRepository'
 import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
 import { CatalogFilters } from '@presentation/components/CatalogFilters'
@@ -29,16 +23,6 @@ import { ProductCard } from '@presentation/components/ProductCard'
 import { ProductDetailPanel } from '@presentation/components/ProductDetailPanel'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
-import { formatCurrency } from '@shared/utils/currency'
-import {
-  CUSTOMER_NAME_MAX_LENGTH,
-  CUSTOMER_PHONE_MAX_LENGTH,
-  isValidCustomerName,
-  isValidCustomerPhone,
-  keepNameLetters,
-  keepPhoneDigits,
-} from '@shared/utils/customerValidation'
-import { registerCheckoutOrder } from '@shared/utils/adminOrderHistory'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 export function HomePage() {
@@ -54,24 +38,12 @@ export function HomePage() {
   const [sortMode, setSortMode] = useState<'featured' | 'priceAsc' | 'priceDesc'>('featured')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [checkoutErrorMessage, setCheckoutErrorMessage] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
-  const [referenceFirstName, setReferenceFirstName] = useState('')
-  const [referencePaternalLastName, setReferencePaternalLastName] = useState('')
-  const [referenceMaternalLastName, setReferenceMaternalLastName] = useState('')
-  const { cartItemsList, cartItemCount, cartSubtotal, addToCart, removeFromCart, clearCart } =
-    useCart()
+  const { cartItemsList, cartItemCount, addToCart } = useCart()
 
   const getFeaturedProductsUseCase = useMemo(() => {
     const repository = createProductRepository()
     return new GetFeaturedProductsUseCase(repository)
-  }, [])
-
-  const generateCheckoutUrlUseCase = useMemo(() => {
-    const checkoutGateway = createCheckoutGateway()
-    return new GenerateCheckoutUrlUseCase(checkoutGateway)
   }, [])
 
   const categories = useMemo<CarouselCategory[]>(() => {
@@ -157,15 +129,6 @@ export function HomePage() {
     }, {})
   }, [cartItemsList])
 
-  const isCustomerInfoValid = useMemo(() => {
-    return (
-      isValidCustomerPhone(customerPhone) &&
-      isValidCustomerName(referenceFirstName) &&
-      isValidCustomerName(referencePaternalLastName) &&
-      isValidCustomerName(referenceMaternalLastName)
-    )
-  }, [customerPhone, referenceFirstName, referencePaternalLastName, referenceMaternalLastName])
-
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -202,54 +165,6 @@ export function HomePage() {
     setSelectedMaxPrice(maxPrice)
     setShowFeaturedOnly(false)
     setSortMode('featured')
-  }
-
-  async function handleCheckout() {
-    if (cartItemsList.some((item) => item.isGift)) {
-      navigate('/cart')
-      return
-    }
-
-    try {
-      setIsCheckoutLoading(true)
-      setCheckoutErrorMessage('')
-
-      const checkoutItems: CheckoutItem[] = cartItemsList.map((item) => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        isGift: item.isGift,
-      }))
-
-      const checkoutCustomer: CheckoutCustomer = {
-        phone: customerPhone.trim(),
-        firstName: referenceFirstName.trim(),
-        paternalLastName: referencePaternalLastName.trim(),
-        maternalLastName: referenceMaternalLastName.trim(),
-      }
-
-      const checkoutLinks = await generateCheckoutUrlUseCase.execute(
-        checkoutItems,
-        { method: 'courier' },
-        checkoutCustomer,
-      )
-      registerCheckoutOrder({
-        items: cartItemsList,
-        subtotal: cartSubtotal,
-        checkoutUrl: checkoutLinks.checkoutUrl,
-        sharedCartUrl: checkoutLinks.sharedCartUrl ?? undefined,
-        shortSharedCartUrl: checkoutLinks.shortSharedCartUrl ?? undefined,
-        customerPhone: checkoutCustomer.phone,
-        referenceFirstName: checkoutCustomer.firstName,
-        referenceLastName: `${checkoutCustomer.paternalLastName} ${checkoutCustomer.maternalLastName}`,
-      })
-      window.open(checkoutLinks.checkoutUrl, '_blank', 'noopener,noreferrer')
-      clearCart()
-      navigate('/')
-    } catch {
-      setCheckoutErrorMessage('No fue posible generar el checkout por WhatsApp.')
-    } finally {
-      setIsCheckoutLoading(false)
-    }
   }
 
   return (
@@ -370,16 +285,6 @@ export function HomePage() {
               <Alert.Content>
                 <Alert.Title>API no disponible</Alert.Title>
                 <Alert.Description>{errorMessage}</Alert.Description>
-              </Alert.Content>
-            </Alert.Root>
-          ) : null}
-
-          {checkoutErrorMessage ? (
-            <Alert.Root status="error" borderRadius="xl" variant="subtle">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Checkout no disponible</Alert.Title>
-                <Alert.Description>{checkoutErrorMessage}</Alert.Description>
               </Alert.Content>
             </Alert.Root>
           ) : null}
@@ -550,124 +455,6 @@ export function HomePage() {
             </Box>
           </Flex>
 
-          <Box
-            borderRadius="2xl"
-            bg="rgba(255, 255, 255, 0.9)"
-            border="1px solid"
-            borderColor="blackAlpha.200"
-            boxShadow="lg"
-            p={{ base: 4, md: 5 }}
-          >
-            <VStack align="stretch" gap={{ base: 3, md: 4 }}>
-              <Heading size={{ base: 'sm', md: 'md' }} color="#17222f">
-                Carrito
-              </Heading>
-              <Text color="#475569">{cartItemCount} item(s) seleccionados</Text>
-              <Separator />
-
-              {cartItemsList.length === 0 ? (
-                <Text color="#64748b">Aun no agregaste productos al carrito.</Text>
-              ) : (
-                <Stack gap={3}>
-                  {cartItemsList.map((item) => (
-                    <Box key={item.lineId}>
-                      <HStack justify="space-between" align="start">
-                        <VStack align="start" gap={0.5}>
-                          <Text fontWeight="semibold" color="#17222f">
-                            {item.product.name}
-                          </Text>
-                          {item.selectedColor || item.selectedSize ? (
-                            <Text fontSize="sm" color="#64748b">
-                              {item.selectedColor ? `Color: ${item.selectedColor}` : ''}
-                              {item.selectedColor && item.selectedSize ? ' · ' : ''}
-                              {item.selectedSize ? `Talla: ${item.selectedSize}` : ''}
-                            </Text>
-                          ) : null}
-                          <Text fontSize="sm" color="#64748b">
-                            {item.quantity} x {formatCurrency(item.product.price)}
-                          </Text>
-                        </VStack>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          color="#c2410c"
-                          onClick={() => removeFromCart(item.lineId)}
-                        >
-                          Quitar
-                        </Button>
-                      </HStack>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-
-              <Separator />
-              <HStack justify="space-between">
-                <Text fontWeight="medium" color="#334155">
-                  Subtotal
-                </Text>
-                <Text fontWeight="bold" fontSize="xl" color="#6b3d84">
-                  {formatCurrency(cartSubtotal)}
-                </Text>
-              </HStack>
-
-              <VStack align="stretch" gap={2}>
-                <Text fontWeight="semibold" color="#0f172a">
-                  Datos del cliente
-                </Text>
-                <Input
-                  placeholder="Celular de contacto"
-                  value={customerPhone}
-                  onChange={(event) => setCustomerPhone(keepPhoneDigits(event.target.value))}
-                  inputMode="numeric"
-                  maxLength={CUSTOMER_PHONE_MAX_LENGTH}
-                  pattern="[0-9]*"
-                  bg="white"
-                />
-                <Input
-                  placeholder="Nombre"
-                  value={referenceFirstName}
-                  onChange={(event) => setReferenceFirstName(keepNameLetters(event.target.value))}
-                  maxLength={CUSTOMER_NAME_MAX_LENGTH}
-                  bg="white"
-                />
-                <Input
-                  placeholder="Apellido paterno"
-                  value={referencePaternalLastName}
-                  onChange={(event) =>
-                    setReferencePaternalLastName(keepNameLetters(event.target.value))
-                  }
-                  maxLength={CUSTOMER_NAME_MAX_LENGTH}
-                  bg="white"
-                />
-                <Input
-                  placeholder="Apellido materno"
-                  value={referenceMaternalLastName}
-                  onChange={(event) =>
-                    setReferenceMaternalLastName(keepNameLetters(event.target.value))
-                  }
-                  maxLength={CUSTOMER_NAME_MAX_LENGTH}
-                  bg="white"
-                />
-                {!isCustomerInfoValid ? (
-                  <Text color="#b91c1c" fontSize="xs">
-                    Ingresa un celular de hasta 9 digitos y nombres de hasta 50 letras.
-                  </Text>
-                ) : null}
-              </VStack>
-
-              <Button
-                bg="#7b4e98"
-                color="white"
-                _hover={{ bg: '#5c3275' }}
-                loading={isCheckoutLoading}
-                disabled={cartItemsList.length === 0 || isCheckoutLoading || !isCustomerInfoValid}
-                onClick={handleCheckout}
-              >
-                Finalizar por WhatsApp
-              </Button>
-            </VStack>
-          </Box>
         </VStack>
       </Container>
 

@@ -45,16 +45,16 @@ describe('HomePage', () => {
     await user.click(addButtons[0])
 
     expect(screen.getAllByRole('button', { name: /carrito \(1\)/i }).length).toBeGreaterThan(0)
-    expect(screen.getByText(/1 item\(s\) seleccionados/i)).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/camisa orbit se agrego al carrito/i)
-    expect(screen.getByRole('button', { name: /finalizar por whatsapp/i })).toBeDisabled()
+    expect(screen.queryByRole('heading', { name: /^carrito$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /finalizar por whatsapp/i })).not.toBeInTheDocument()
 
-    const phoneInput = screen.getByPlaceholderText(/celular de contacto/i)
-    const firstNameInput = screen.getByPlaceholderText(/^nombre$/i)
-    await user.type(phoneInput, '987-654-3210')
-    await user.type(firstNameInput, `Ana2${'b'.repeat(60)}`)
-    expect(phoneInput).toHaveValue('987654321')
-    expect(firstNameInput).toHaveValue(`Ana${'b'.repeat(47)}`)
+    await user.click(screen.getAllByRole('button', { name: /carrito \(1\)/i })[0])
+    expect(await screen.findByRole('heading', { name: /resumen de pedido/i })).toBeInTheDocument()
+    expect(screen.getAllByText(/camisa orbit/i).length).toBeGreaterThan(0)
+
+    window.history.pushState({}, '', '/')
+    window.dispatchEvent(new PopStateEvent('popstate'))
 
     const detailLinks = await screen.findAllByRole('link', { name: /ver detalle/i })
     await user.click(detailLinks[0])
