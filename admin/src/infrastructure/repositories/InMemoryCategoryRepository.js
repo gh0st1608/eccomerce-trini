@@ -49,6 +49,8 @@ export class InMemoryCategoryRepository extends CategoryRepositoryPort {
       slug: category.slug,
       description: category.description,
       active: category.active,
+      parentId: category.parentId,
+      imageUrl: category.imageUrl,
     };
 
     CATEGORIES.push(newCategory);
@@ -67,6 +69,8 @@ export class InMemoryCategoryRepository extends CategoryRepositoryPort {
       slug: category.slug,
       description: category.description,
       active: category.active,
+      parentId: category.parentId,
+      imageUrl: category.imageUrl,
     };
 
     CATEGORIES[index] = updatedCategory;

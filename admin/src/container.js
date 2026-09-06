@@ -110,8 +110,8 @@ export const createContainer = ({ overrides = {} } = {}) => {
   const listInternalUsersUseCase = new ListInternalUsersUseCase({ internalUserRepository });
   const createInternalUserUseCase = new CreateInternalUserUseCase({ internalUserRepository });
   const listCategoriesUseCase = new ListCategoriesUseCase({ categoryRepository });
-  const createCategoryUseCase = new CreateCategoryUseCase({ categoryRepository });
-  const updateCategoryUseCase = new UpdateCategoryUseCase({ categoryRepository });
+  const createCategoryUseCase = new CreateCategoryUseCase({ categoryRepository, productImageStorage });
+  const updateCategoryUseCase = new UpdateCategoryUseCase({ categoryRepository, productImageStorage });
   const listStoresUseCase = new ListStoresUseCase({ storeRepository });
   const createStoreUseCase = new CreateStoreUseCase({ storeRepository });
   const updateStoreUseCase = new UpdateStoreUseCase({ storeRepository });

@@ -8,6 +8,7 @@ import {
   Flex,
   Heading,
   HStack,
+  Image,
   Input,
   Separator,
   Text,
@@ -90,6 +91,8 @@ const defaultCategoryForm: CreateAdminCategoryInput = {
   slug: '',
   description: '',
   active: true,
+  parentId: undefined,
+  imageUrl: undefined,
 }
 
 const defaultStoreForm: CreateAdminStoreInput = {
@@ -268,12 +271,15 @@ function normalizeSlug(value: string): string {
 function normalizeCategoryPayload(payload: CreateAdminCategoryInput): CreateAdminCategoryInput {
   const normalizedName = payload.name.trim()
   const normalizedSlugSource = payload.slug.trim().length > 0 ? payload.slug : normalizedName
+  const normalizedImageUrl = payload.imageUrl?.trim()
 
   return {
     ...payload,
     name: normalizedName,
     slug: normalizeSlug(normalizedSlugSource),
     description: payload.description.trim(),
+    parentId: payload.parentId || undefined,
+    imageUrl: normalizedImageUrl || undefined,
   }
 }
 
@@ -286,6 +292,13 @@ function validateCategoryPayload(payload: CreateAdminCategoryInput): { isValid: 
     return {
       isValid: false,
       message: 'El slug solo puede contener minusculas, numeros y guiones (ej. joyas-finas).',
+    }
+  }
+
+  if (payload.parentId && !isHttpImageReference(payload.imageUrl)) {
+    return {
+      isValid: false,
+      message: 'Las categorias especificas necesitan una imagen valida para mostrarse en el mosaico.',
     }
   }
 
@@ -962,6 +975,24 @@ export function AdminDashboardPage() {
     }
   }
 
+  async function handleCategoryImageUpload(files: FileList | null) {
+    if (!files || files.length === 0) {
+      return
+    }
+
+    try {
+      const [dataUrl] = await normalizeProductImages(files)
+      if (!dataUrl) {
+        return
+      }
+
+      setCategoryForm((prev) => ({ ...prev, imageUrl: dataUrl }))
+      openFeedback('info', 'Imagen de categoria normalizada', 'La portada se recorto a 4:5 y se optimizo para subirla al guardar.')
+    } catch {
+      openFeedback('error', 'Carga de imagen', 'No se pudo procesar la imagen de categoria seleccionada.')
+    }
+  }
+
   const loadAllData = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -1120,6 +1151,8 @@ export function AdminDashboardPage() {
       slug: category.slug,
       description: category.description,
       active: category.active,
+      parentId: category.parentId,
+      imageUrl: category.imageUrl,
     })
     setCategoryEditor({ isOpen: true, mode: 'update', categoryId: category.id })
   }
@@ -1727,6 +1760,9 @@ export function AdminDashboardPage() {
                   Slug
                 </Box>
                 <Box as="th" p={3} textAlign="left">
+                  Tipo
+                </Box>
+                <Box as="th" p={3} textAlign="left">
                   Descripcion
                 </Box>
                 <Box as="th" p={3} textAlign="left">
@@ -1745,6 +1781,11 @@ export function AdminDashboardPage() {
                   </Box>
                   <Box as="td" p={3}>
                     {category.slug}
+                  </Box>
+                  <Box as="td" p={3}>
+                    {category.parentId
+                      ? categories.find((entry) => entry.id === category.parentId)?.name ?? 'Especifica'
+                      : 'General'}
                   </Box>
                   <Box as="td" p={3}>
                     {category.description}
@@ -3280,6 +3321,66 @@ export function AdminDashboardPage() {
               value={categoryForm.description}
               onChange={(event) => setCategoryForm((prev) => ({ ...prev, description: event.target.value }))}
             />
+          </FormField>
+
+          <FormField
+            label="Categoria general"
+            helper="Dejala sin seleccionar para crear una categoria general. Selecciona una para crear una categoria especifica."
+          >
+            <select
+              value={categoryForm.parentId ?? ''}
+              onChange={(event) =>
+                setCategoryForm((prev) => ({
+                  ...prev,
+                  parentId: event.target.value || undefined,
+                }))
+              }
+              style={comboStyle}
+            >
+              <option value="">Sin categoria padre (general)</option>
+              {categories
+                .filter((category) => !category.parentId && category.id !== categoryEditor.categoryId)
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+            </select>
+          </FormField>
+
+          <FormField
+            label="Imagen de categoria"
+            helper="Obligatoria para categorias especificas. Los archivos se recortan a 4:5 y se convierten a WebP."
+          >
+            <VStack align="stretch" gap={2}>
+              <Input
+                placeholder="https://..."
+                value={categoryForm.imageUrl ?? ''}
+                onChange={(event) =>
+                  setCategoryForm((prev) => ({
+                    ...prev,
+                    imageUrl: event.target.value || undefined,
+                  }))
+                }
+              />
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(event) => void handleCategoryImageUpload(event.target.files)}
+              />
+              {isHttpImageReference(categoryForm.imageUrl) ? (
+                <Image
+                  src={categoryForm.imageUrl}
+                  alt="Vista previa de categoria"
+                  width="120px"
+                  aspectRatio="4 / 5"
+                  objectFit="cover"
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="#cbd5e1"
+                />
+              ) : null}
+            </VStack>
           </FormField>
 
           <FormField label="Estado de categoria">

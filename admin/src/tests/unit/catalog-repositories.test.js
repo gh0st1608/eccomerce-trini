@@ -126,7 +126,14 @@ describe('InMemoryProductRepository', () => {
       currency: 'PEN',
       stock: 5,
       status: 'active',
-      variants: [{ attributes: [{ name: 'Color', value: 'Rojo' }, { name: 'Talla', value: 'M' }] }],
+      variants: [
+        {
+          attributes: [
+            { name: 'Color', value: 'Rojo' },
+            { name: 'Talla', value: 'M' },
+          ],
+        },
+      ],
     });
 
     expect(created.productType).toBe('variable');
@@ -182,19 +189,29 @@ describe('InMemoryCategoryRepository', () => {
       slug: 'accesorios',
       description: 'Accesorios de temporada',
       active: true,
+      parentId: 'cat-002',
+      imageUrl: 'https://cdn.example.com/categories/accesorios.webp',
     });
 
     const bySlug = await repository.findBySlug('accesorios');
     expect(bySlug.id).toBe(createdCategory.id);
+    expect(bySlug.parentId).toBe('cat-002');
+    expect(bySlug.imageUrl).toBe('https://cdn.example.com/categories/accesorios.webp');
 
     const updatedCategory = await repository.update(createdCategory.id, {
       name: 'Accesorios Premium',
       slug: 'accesorios-premium',
       description: 'Accesorios premium',
       active: false,
+      parentId: 'cat-002',
+      imageUrl: 'https://cdn.example.com/categories/accesorios-premium.webp',
     });
 
     expect(updatedCategory.slug).toBe('accesorios-premium');
+    expect(updatedCategory.parentId).toBe('cat-002');
+    expect(updatedCategory.imageUrl).toBe(
+      'https://cdn.example.com/categories/accesorios-premium.webp',
+    );
     expect((await repository.findById(createdCategory.id)).active).toBe(false);
     expect(await repository.update('missing-category', updatedCategory)).toBeNull();
   });

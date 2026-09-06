@@ -23,6 +23,8 @@ function mapCategoryDtoToDomain(dto: AdminCategoryDto): AdminCategory {
     slug: parsed.slug,
     description: parsed.description,
     active: parsed.active,
+    parentId: parsed.parentId,
+    imageUrl: parsed.imageUrl,
   }
 }
 
@@ -67,10 +69,10 @@ export class HttpAdminCategoryRepository implements AdminCategoryRepository {
   }
 
   async create(payload: CreateAdminCategoryInput): Promise<AdminCategory> {
-    const response = await this.httpClient.post<AdminCategorySingleResponse, CreateAdminCategoryInput>(
-      '/categories',
-      payload,
-    )
+    const response = await this.httpClient.post<
+      AdminCategorySingleResponse,
+      CreateAdminCategoryInput
+    >('/categories', payload)
 
     return mapSingleCategoryResponse(response)
   }
@@ -78,10 +80,10 @@ export class HttpAdminCategoryRepository implements AdminCategoryRepository {
   async update(payload: UpdateAdminCategoryInput): Promise<AdminCategory> {
     const { id, ...body } = payload
 
-    const response = await this.httpClient.put<AdminCategorySingleResponse, CreateAdminCategoryInput>(
-      `/categories/${id}`,
-      body,
-    )
+    const response = await this.httpClient.put<
+      AdminCategorySingleResponse,
+      CreateAdminCategoryInput
+    >(`/categories/${id}`, body)
 
     return mapSingleCategoryResponse(response)
   }

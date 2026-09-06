@@ -11,7 +11,9 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
   }
 
   async list() {
-    const { Items = [] } = await this.documentClient.send(new ScanCommand({ TableName: this.tableName }));
+    const { Items = [] } = await this.documentClient.send(
+      new ScanCommand({ TableName: this.tableName }),
+    );
     return Items.map((item) => new Category(item));
   }
 
@@ -25,7 +27,9 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
   // Small catalog: a Scan + filter is simpler and cheap enough than maintaining a GSI.
   async findBySlug(slug) {
     const normalizedSlug = slug.trim().toLowerCase();
-    const { Items = [] } = await this.documentClient.send(new ScanCommand({ TableName: this.tableName }));
+    const { Items = [] } = await this.documentClient.send(
+      new ScanCommand({ TableName: this.tableName }),
+    );
     const match = Items.find((item) => String(item.slug ?? '').toLowerCase() === normalizedSlug);
     return match ? new Category(match) : null;
   }
@@ -37,9 +41,13 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
       slug: category.slug,
       description: category.description,
       active: category.active,
+      parentId: category.parentId,
+      imageUrl: category.imageUrl,
     };
 
-    await this.documentClient.send(new PutCommand({ TableName: this.tableName, Item: newCategory }));
+    await this.documentClient.send(
+      new PutCommand({ TableName: this.tableName, Item: newCategory }),
+    );
     return new Category(newCategory);
   }
 
@@ -55,9 +63,13 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
       slug: category.slug,
       description: category.description,
       active: category.active,
+      parentId: category.parentId,
+      imageUrl: category.imageUrl,
     };
 
-    await this.documentClient.send(new PutCommand({ TableName: this.tableName, Item: updatedCategory }));
+    await this.documentClient.send(
+      new PutCommand({ TableName: this.tableName, Item: updatedCategory }),
+    );
     return new Category(updatedCategory);
   }
 }

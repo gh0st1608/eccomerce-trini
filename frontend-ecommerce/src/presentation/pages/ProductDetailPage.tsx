@@ -205,8 +205,9 @@ export function ProductDetailPage() {
                           alt={`${product.name} vista ${index + 1}`}
                           flex="0 0 100%"
                           width="100%"
-                          height="320px"
-                          objectFit="contain"
+                          aspectRatio="4 / 5"
+                          objectFit="cover"
+                          objectPosition="center"
                           bg="white"
                           scrollSnapAlign="start"
                         />
@@ -253,7 +254,8 @@ export function ProductDetailPage() {
                             <Image
                               src={imageUrl}
                               alt={`${product.name} vista ${index + 1}`}
-                              objectFit="contain"
+                              objectFit="cover"
+                              objectPosition="center"
                               width="100%"
                               height="100%"
                             />
@@ -267,8 +269,10 @@ export function ProductDetailPage() {
                         src={galleryImages[selectedImageIndex] ?? product.imageUrl}
                         alt={product.name}
                         width="100%"
-                        height="540px"
-                        objectFit="contain"
+                        aspectRatio="4 / 5"
+                        maxHeight="680px"
+                        objectFit="cover"
+                        objectPosition="center"
                         bg="white"
                         borderRadius="xl"
                       />

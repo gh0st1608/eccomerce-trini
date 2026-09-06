@@ -3,69 +3,62 @@ import {
   Box,
   Button,
   Container,
+  Flex,
   Heading,
-  HStack,
   SimpleGrid,
   Stack,
   Text,
   VStack,
 } from '@chakra-ui/react'
 import { useNavigate } from 'react-router-dom'
-import { GetFeaturedProductsUseCase } from '@application/use-cases/GetFeaturedProductsUseCase'
-import type { Product } from '@domain/entities/Product'
-import { createProductRepository } from '@infrastructure/factories/createProductRepository'
-import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
+import { ListCategoriesUseCase } from '@application/use-cases/ListCategoriesUseCase'
+import type { AdminCategory } from '@domain/entities/AdminCategory'
+import { createCategoryRepository } from '@infrastructure/factories/createCategoryRepository'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
 
-interface CategorySummary {
-  name: string
-  count: number
-  product: Product | null
-}
-
 export function CategoriesPage() {
   const navigate = useNavigate()
   const { cartItemCount } = useCart()
-  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<AdminCategory[]>([])
+  const [selectedGeneralId, setSelectedGeneralId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
 
-  const categories = useMemo<CategorySummary[]>(() => {
-    const summaries = new Map<string, CategorySummary>()
-
-    products.forEach((product) => {
-      const current = summaries.get(product.category)
-
-      if (!current) {
-        summaries.set(product.category, {
-          name: product.category,
-          count: 1,
-          product,
-        })
-        return
-      }
-
-      summaries.set(product.category, {
-        ...current,
-        count: current.count + 1,
-      })
-    })
-
-    return Array.from(summaries.values())
-  }, [products])
+  const activeCategories = useMemo(
+    () => categories.filter((category) => category.active),
+    [categories],
+  )
+  const generalCategories = useMemo(
+    () => activeCategories.filter((category) => !category.parentId),
+    [activeCategories],
+  )
+  const selectedGeneral = generalCategories.find((category) => category.id === selectedGeneralId)
+  const specificCategories = useMemo(
+    () => activeCategories.filter((category) => category.parentId === selectedGeneralId),
+    [activeCategories, selectedGeneralId],
+  )
 
   useEffect(() => {
     async function loadCategories() {
       try {
-        const repository = createProductRepository()
-        const useCase = new GetFeaturedProductsUseCase(repository)
-        const fetchedProducts = await useCase.execute()
-        setProducts(fetchedProducts)
+        const useCase = new ListCategoriesUseCase(createCategoryRepository())
+        const fetchedCategories = await useCase.execute()
+        const activeGeneralCategories = fetchedCategories.filter(
+          (category) => category.active && !category.parentId,
+        )
+        const firstGeneral =
+          activeGeneralCategories.find((generalCategory) =>
+            fetchedCategories.some(
+              (category) => category.active && category.parentId === generalCategory.id,
+            ),
+          ) ?? activeGeneralCategories[0]
+
+        setCategories(fetchedCategories)
+        setSelectedGeneralId(firstGeneral?.id ?? null)
       } catch {
-        const fallbackRepository = new InMemoryProductRepository()
-        const fallbackProducts = await fallbackRepository.findFeatured()
-        setProducts(fallbackProducts)
+        setHasError(true)
       } finally {
         setIsLoading(false)
       }
@@ -79,83 +72,162 @@ export function CategoriesPage() {
       <StoreHeader
         searchTerm=""
         onSearchChange={() => undefined}
-        totalProducts={categories.length}
-        filteredProducts={categories.length}
+        totalProducts={specificCategories.length}
+        filteredProducts={specificCategories.length}
         cartCount={cartItemCount}
         onCartClick={() => navigate('/cart')}
         showSearch={false}
         resultLabel="categorias"
-        summaryText={`${categories.length} categorias disponibles`}
+        summaryText={`${specificCategories.length} categorias disponibles`}
       />
 
-      <Container maxW="7xl" py={{ base: 5, md: 10 }} pb={{ base: 20, md: 10 }}>
-        <VStack align="stretch" gap={{ base: 4, md: 8 }}>
-          <Stack gap={2}>
-            <Text letterSpacing="0.14em" fontWeight="bold" textTransform="uppercase" color="#0f766e">
-              Catalogos
-            </Text>
-            <Heading size={{ base: 'xl', md: '3xl' }} color="#0f172a" fontFamily="'Space Grotesk', sans-serif">
-              Explora las categorias y entra al catalogo filtrado
-            </Heading>
-            <Text color="#334155" maxW="3xl">
-              Cada categoria te lleva al home con el filtro aplicado para mantener una experiencia
-              rapida y continua.
-            </Text>
-          </Stack>
+      <Container
+        maxW="7xl"
+        px={{ base: 3, md: 6 }}
+        py={{ base: 5, md: 9 }}
+        pb={{ base: 20, md: 10 }}
+      >
+        <Stack gap={{ base: 5, md: 8 }}>
+          <Heading
+            size={{ base: 'xl', md: '2xl' }}
+            color="#17222f"
+            fontFamily="'Space Grotesk', sans-serif"
+          >
+            Categorias
+          </Heading>
 
-          {isLoading ? (
-            <Text color="#0f172a" fontWeight="semibold">
-              Cargando categorias...
-            </Text>
-          ) : null}
+          {isLoading ? <Text color="#475569">Cargando categorias...</Text> : null}
+          {hasError ? <Text color="#b91c1c">No fue posible cargar las categorias.</Text> : null}
 
-          <SimpleGrid columns={{ base: 2, md: 2, xl: 3 }} gap={{ base: 3, md: 6 }}>
-            {categories.map((category) => (
-              <Box
-                key={category.name}
-                bg="rgba(255, 255, 255, 0.94)"
-                border="1px solid"
-                borderColor="blackAlpha.200"
-                borderRadius="2xl"
-                overflow="hidden"
-                boxShadow="lg"
+          {!isLoading && !hasError ? (
+            <Flex align="stretch" gap={0}>
+              <VStack
+                as="nav"
+                aria-label="Categorias generales"
+                align="stretch"
+                gap={1}
+                width={{ base: '104px', sm: '132px', md: '220px' }}
+                flexShrink={0}
+                position="sticky"
+                top={{ base: '72px', md: '96px' }}
               >
-                <Box
-                  height={{ base: '96px', md: '190px' }}
-                  bgImage={`url(${category.product?.imageUrl ?? ''})`}
-                  bgSize="cover"
-                  backgroundPosition="center"
-                  cursor="pointer"
-                  role="button"
-                  aria-label={`Ver productos de ${category.name}`}
-                  onClick={() => navigate(`/?category=${encodeURIComponent(category.name)}`)}
-                />
-                <Stack p={{ base: 3, md: 5 }} gap={{ base: 2, md: 3 }}>
-                  <HStack justify="space-between" align="start">
-                    <Heading size={{ base: 'xs', md: 'md' }} color="#17222f" lineClamp={2}>
+                {generalCategories.map((category) => {
+                  const isSelected = category.id === selectedGeneralId
+
+                  return (
+                    <Button
+                      key={category.id}
+                      minH={{ base: '48px', md: '52px' }}
+                      px={{ base: 2, md: 4 }}
+                      py={2}
+                      borderLeft="3px solid"
+                      borderColor={isSelected ? '#653d7d' : 'transparent'}
+                      bg={isSelected ? '#f1e7f7' : 'transparent'}
+                      color={isSelected ? '#4a1d63' : '#513766'}
+                      fontSize={{ base: 'sm', md: 'md' }}
+                      fontWeight={isSelected ? 'bold' : 'medium'}
+                      textAlign="left"
+                      justifyContent="flex-start"
+                      whiteSpace="normal"
+                      borderRadius={0}
+                      variant="plain"
+                      lineHeight="1.25"
+                      cursor="pointer"
+                      _hover={{ bg: '#f6effa', color: '#4a1d63' }}
+                      onClick={() => setSelectedGeneralId(category.id)}
+                    >
                       {category.name}
-                    </Heading>
-                    <Text color="#0f766e" fontWeight="bold" fontSize={{ base: 'sm', md: 'md' }}>
-                      {category.count}
-                    </Text>
-                  </HStack>
-                  <Text color="#475569" fontSize={{ base: 'xs', md: 'md' }} display={{ base: 'none', md: 'block' }}>
-                    Selecciona esta categoria para ver el catalogo filtrado en Home.
-                  </Text>
-                  <Button
-                    size={{ base: 'xs', md: 'sm' }}
-                    bg="#0f172a"
-                    color="white"
-                    _hover={{ bg: '#1f2937' }}
-                    onClick={() => navigate(`/?category=${encodeURIComponent(category.name)}`)}
+                    </Button>
+                  )
+                })}
+              </VStack>
+
+              <Box
+                flex="1"
+                minW={0}
+                minH={{ base: '500px', md: '560px' }}
+                ml={{ base: 2, md: 6 }}
+                pl={{ base: 3, md: 8 }}
+                borderLeft="1px solid"
+                borderColor="#d8c6e3"
+              >
+                <Stack gap={1} mb={{ base: 4, md: 6 }}>
+                  <Text
+                    color="#7b4e98"
+                    fontSize={{ base: 'xs', md: 'sm' }}
+                    fontWeight="bold"
+                    textTransform="uppercase"
+                    letterSpacing="0.08em"
                   >
-                    Ver productos
-                  </Button>
+                    Explora la coleccion
+                  </Text>
+                  <Heading
+                    size={{ base: 'md', md: 'xl' }}
+                    color="#2b123d"
+                    fontFamily="'Space Grotesk', sans-serif"
+                  >
+                    {selectedGeneral?.name ?? 'Categorias especificas'}
+                  </Heading>
+                  <Box width="40px" height="3px" bg="#7b4e98" borderRadius="full" />
                 </Stack>
+
+                {specificCategories.length > 0 ? (
+                  <SimpleGrid columns={{ base: 2, lg: 3 }} gap={{ base: 3, md: 6 }}>
+                    {specificCategories.map((category) => (
+                      <Button
+                        key={category.id}
+                        width="100%"
+                        height="auto"
+                        p={0}
+                        display="block"
+                        bg="transparent"
+                        borderRadius="md"
+                        textAlign="left"
+                        cursor="pointer"
+                        onClick={() => navigate(`/?category=${encodeURIComponent(category.slug)}`)}
+                        aria-label={`Ver productos de ${category.name}`}
+                      >
+                        <Box
+                          width="100%"
+                          aspectRatio="4 / 5"
+                          bg={category.imageUrl ? '#e2e8f0' : '#dbe7e3'}
+                          bgImage={category.imageUrl ? `url(${category.imageUrl})` : undefined}
+                          bgSize="cover"
+                          backgroundPosition="center"
+                          borderRadius="md"
+                          border="1px solid"
+                          borderColor="#eadff0"
+                          overflow="hidden"
+                          boxShadow="0 7px 20px rgba(74, 29, 99, 0.12)"
+                          transition="transform 180ms ease, box-shadow 180ms ease"
+                          _hover={{
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 12px 28px rgba(74, 29, 99, 0.2)',
+                          }}
+                        />
+                        <Text
+                          mt={2}
+                          color="#4a1d63"
+                          fontWeight="bold"
+                          fontSize={{ base: 'sm', md: 'md' }}
+                          lineClamp={2}
+                        >
+                          {category.name}
+                        </Text>
+                      </Button>
+                    ))}
+                  </SimpleGrid>
+                ) : (
+                  <Box borderTop="1px solid" borderColor="#cbd5e1" py={6}>
+                    <Text color="#64748b">
+                      Esta categoria general aun no tiene categorias especificas.
+                    </Text>
+                  </Box>
+                )}
               </Box>
-            ))}
-          </SimpleGrid>
-        </VStack>
+            </Flex>
+          ) : null}
+        </Stack>
       </Container>
 
       <MobileBottomNav cartCount={cartItemCount} />

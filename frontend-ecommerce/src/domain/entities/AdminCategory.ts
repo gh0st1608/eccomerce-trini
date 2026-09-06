@@ -4,6 +4,8 @@ export interface AdminCategory {
   slug: string
   description: string
   active: boolean
+  parentId?: string
+  imageUrl?: string
 }
 
 export interface CreateAdminCategoryInput {
@@ -11,6 +13,8 @@ export interface CreateAdminCategoryInput {
   slug: string
   description: string
   active: boolean
+  parentId?: string
+  imageUrl?: string
 }
 
 export interface UpdateAdminCategoryInput extends CreateAdminCategoryInput {

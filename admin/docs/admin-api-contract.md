@@ -50,7 +50,9 @@ Example response:
         "name": "Camisas",
         "slug": "camisas",
         "description": "Camisas para oficina y casual.",
-        "active": true
+        "active": true,
+        "parentId": "cat-ropa",
+        "imageUrl": "https://cdn.example.com/categories/camisas/cover.webp"
       }
     ]
   },
@@ -70,7 +72,9 @@ Request body:
   "name": "Polos",
   "slug": "polos",
   "description": "Categoria para polos de temporada",
-  "active": true
+  "active": true,
+  "parentId": "cat-ropa",
+  "imageUrl": "https://cdn.example.com/categories/polos/cover.webp"
 }
 ```
 
@@ -78,6 +82,9 @@ Business rules:
 
 - `slug` must match: `^[a-z0-9]+(?:-[a-z0-9]+)*$`
 - `slug` must be unique
+- `parentId` is optional. Categories without it are general categories.
+- A category referenced by `parentId` must exist and must be a general category.
+- `imageUrl` is optional and accepts an HTTP(S) URL or an image Data URL. Data URLs are uploaded to image storage before persistence.
 
 Example success (201):
 
@@ -90,7 +97,9 @@ Example success (201):
       "name": "Polos",
       "slug": "polos",
       "description": "Categoria para polos de temporada",
-      "active": true
+      "active": true,
+      "parentId": "cat-ropa",
+      "imageUrl": "https://cdn.example.com/categories/polos/cover.webp"
     }
   },
   "message": "Category created successfully",
@@ -122,7 +131,9 @@ Request body:
   "name": "Polos Premium",
   "slug": "polos-premium",
   "description": "Categoria actualizada",
-  "active": true
+  "active": true,
+  "parentId": "cat-ropa",
+  "imageUrl": "https://cdn.example.com/categories/polos-premium/cover.webp"
 }
 ```
 
@@ -130,6 +141,7 @@ Possible errors:
 
 - `404 NOT_FOUND` when category id does not exist.
 - `400 BUSINESS_ERROR` for invalid or duplicated slug.
+- `400 BUSINESS_ERROR` when the parent does not exist, is already a child, or is the category itself.
 
 ## Products (admin scope)
 

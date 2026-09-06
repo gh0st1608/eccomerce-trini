@@ -15,7 +15,8 @@ import { RegisterCheckoutItemsUseCase } from '../../application/usecases/Registe
 import { BusinessError, NotFoundError } from '../../domain/exceptions/index.js';
 
 describe('UseCases', () => {
-  const pngDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3z4xkAAAAASUVORK5CYII=';
+  const pngDataUrl =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO3z4xkAAAAASUVORK5CYII=';
 
   test('list products', async () => {
     const productRepository = { list: jest.fn().mockResolvedValue([{ id: '1' }]) };
@@ -65,7 +66,9 @@ describe('UseCases', () => {
         }),
       },
       categoryRepository: {
-        list: jest.fn().mockResolvedValue([{ id: 'cat-1', name: 'Camisas', slug: 'camisas', active: true }]),
+        list: jest
+          .fn()
+          .mockResolvedValue([{ id: 'cat-1', name: 'Camisas', slug: 'camisas', active: true }]),
       },
     });
 
@@ -80,7 +83,14 @@ describe('UseCases', () => {
       productRepository: { create: jest.fn() },
     });
     await expect(
-      useCase.execute({ name: 'A', sku: 'A', price: 1, currency: 'PEN', stock: -1, status: 'active' }),
+      useCase.execute({
+        name: 'A',
+        sku: 'A',
+        price: 1,
+        currency: 'PEN',
+        stock: -1,
+        status: 'active',
+      }),
     ).rejects.toBeInstanceOf(BusinessError);
   });
 
@@ -171,6 +181,64 @@ describe('UseCases', () => {
 
     await expect(
       useCase.execute({ name: 'Polos', slug: 'polos', description: '', active: true }),
+    ).rejects.toBeInstanceOf(BusinessError);
+  });
+
+  test('create category accepts a general parent and uploads its image', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 'cat-child' });
+    const uploadDataUrl = jest
+      .fn()
+      .mockResolvedValue('https://cdn.example.com/categories/polos/cover.webp');
+    const categoryRepository = {
+      findBySlug: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockResolvedValue({ id: 'cat-general', name: 'Ropa' }),
+      create,
+    };
+    const useCase = new CreateCategoryUseCase({
+      categoryRepository,
+      productImageStorage: { uploadDataUrl },
+    });
+
+    await useCase.execute({
+      name: 'Polos',
+      slug: 'polos',
+      description: '',
+      active: true,
+      parentId: 'cat-general',
+      imageUrl: pngDataUrl,
+    });
+
+    expect(categoryRepository.findById).toHaveBeenCalledWith('cat-general');
+    expect(uploadDataUrl).toHaveBeenCalledWith({
+      dataUrl: pngDataUrl,
+      keyPrefix: 'categories/polos',
+      fileNameHint: 'cover',
+    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentId: 'cat-general',
+        imageUrl: 'https://cdn.example.com/categories/polos/cover.webp',
+      }),
+    );
+  });
+
+  test('create category rejects a nested parent', async () => {
+    const useCase = new CreateCategoryUseCase({
+      categoryRepository: {
+        findBySlug: jest.fn().mockResolvedValue(null),
+        findById: jest.fn().mockResolvedValue({ id: 'cat-child', parentId: 'cat-general' }),
+        create: jest.fn(),
+      },
+    });
+
+    await expect(
+      useCase.execute({
+        name: 'Polos manga corta',
+        slug: 'polos-manga-corta',
+        description: '',
+        active: true,
+        parentId: 'cat-child',
+      }),
     ).rejects.toBeInstanceOf(BusinessError);
   });
 
@@ -271,7 +339,12 @@ describe('UseCases', () => {
     });
 
     await expect(
-      useCase.execute('cat-1', { name: 'Polos', slug: 'Polos Invalid', description: '', active: true }),
+      useCase.execute('cat-1', {
+        name: 'Polos',
+        slug: 'Polos Invalid',
+        description: '',
+        active: true,
+      }),
     ).rejects.toBeInstanceOf(BusinessError);
 
     await expect(
@@ -296,6 +369,26 @@ describe('UseCases', () => {
         active: true,
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  test('update category rejects itself as parent', async () => {
+    const useCase = new UpdateCategoryUseCase({
+      categoryRepository: {
+        findById: jest.fn().mockResolvedValue({ id: 'cat-1' }),
+        findBySlug: jest.fn().mockResolvedValue({ id: 'cat-1' }),
+        update: jest.fn(),
+      },
+    });
+
+    await expect(
+      useCase.execute('cat-1', {
+        name: 'Polos',
+        slug: 'polos',
+        description: '',
+        active: true,
+        parentId: 'cat-1',
+      }),
+    ).rejects.toBeInstanceOf(BusinessError);
   });
 
   test('create store rejects invalid slug and disabled methods', async () => {
