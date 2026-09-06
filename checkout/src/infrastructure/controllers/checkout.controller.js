@@ -2,6 +2,11 @@ import { successResponse } from '../../shared/utils/response.js';
 import { ValidationError } from '../../domain/exceptions/index.js';
 
 const resolvePublicBaseUrl = (req, fallback = '') => {
+  const configuredBaseUrl = String(fallback).trim().replace(/\/$/, '');
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
+
   const forwardedProto = req.headers['x-forwarded-proto'];
   const forwardedHost = req.headers['x-forwarded-host'];
 

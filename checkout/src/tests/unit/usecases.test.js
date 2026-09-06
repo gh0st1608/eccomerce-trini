@@ -79,7 +79,12 @@ describe('Use Cases', () => {
 
     const result = await useCase.execute({
       items: [{ productId: 'SKU-001', quantity: 2 }],
-      customer: { phone: '51999999999', firstName: 'Ana', lastName: 'Perez' },
+      customer: {
+        phone: '999999999',
+        firstName: 'Ana',
+        paternalLastName: 'Perez',
+        maternalLastName: 'Gomez',
+      },
       delivery: { method: 'courier' },
     });
 
@@ -97,7 +102,13 @@ describe('Use Cases', () => {
         ],
       }),
       expect.objectContaining({ method: 'courier' }),
-      expect.objectContaining({ sharedCartUrl: null }),
+      expect.objectContaining({
+        sharedCartUrl: null,
+        customer: expect.objectContaining({
+          paternalLastName: 'Perez',
+          maternalLastName: 'Gomez',
+        }),
+      }),
     );
   });
 

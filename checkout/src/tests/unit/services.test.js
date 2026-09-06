@@ -2,7 +2,7 @@ import { WhatsappLinkService } from '../../domain/services/WhatsappLinkService.j
 import { jest } from '@jest/globals';
 
 describe('WhatsappLinkService', () => {
-  test('buildCheckoutLink sends full customer name followed by shared cart link', async () => {
+  test('buildCheckoutLink sends labeled customer and courier details', async () => {
     const whatsappClient = { buildLink: jest.fn().mockReturnValue('https://wa.me/1') };
     const service = new WhatsappLinkService({ whatsappClient });
 
@@ -11,6 +11,7 @@ describe('WhatsappLinkService', () => {
       { method: 'courier' },
       {
         customer: {
+          phone: '932492966',
           firstName: 'Ana',
           paternalLastName: 'Perez',
           maternalLastName: 'Gomez',
@@ -20,7 +21,12 @@ describe('WhatsappLinkService', () => {
     );
 
     expect(whatsappClient.buildLink).toHaveBeenCalledWith(
-      'Ana Perez Gomez\nhttps://shop.example.com/cart/shared?token=abc',
+      [
+        'Nombre: Ana Perez Gomez',
+        'Celular: 932492966',
+        'Entrega: Courier',
+        'Carrito: https://shop.example.com/cart/shared?token=abc',
+      ].join('\n'),
     );
   });
 
@@ -45,7 +51,9 @@ describe('WhatsappLinkService', () => {
     expect(result.checkoutUrl).toBe('https://wa.me/1');
     expect(result.subtotal).toBe(100);
     expect(result.itemCount).toBe(1);
-    expect(whatsappClient.buildLink).toHaveBeenCalledWith('https://shop.example.com/cart/shared?token=abc');
+    expect(whatsappClient.buildLink).toHaveBeenCalledWith(
+      'Entrega: Courier\nCarrito: https://shop.example.com/cart/shared?token=abc',
+    );
   });
 
   test('buildCheckoutLink still computes metrics for pickup flow', async () => {
@@ -62,12 +70,27 @@ describe('WhatsappLinkService', () => {
         storeAddress: 'Av. Larco 512',
         storeDistrict: 'Miraflores',
       },
-      { sharedCartUrl: 'https://shop.example.com/cart/shared?token=pickup' },
+      {
+        customer: {
+          phone: '932492966',
+          firstName: 'Ana',
+          paternalLastName: 'Perez',
+          maternalLastName: 'Gomez',
+        },
+        sharedCartUrl: 'https://shop.example.com/cart/shared?token=pickup',
+      },
     );
 
     expect(result.subtotal).toBe(120);
     expect(result.itemCount).toBe(1);
-    expect(whatsappClient.buildLink).toHaveBeenCalledWith('https://shop.example.com/cart/shared?token=pickup');
+    expect(whatsappClient.buildLink).toHaveBeenCalledWith(
+      [
+        'Nombre: Ana Perez Gomez',
+        'Celular: 932492966',
+        'Entrega: Tienda',
+        'Carrito: https://shop.example.com/cart/shared?token=pickup',
+      ].join('\n'),
+    );
   });
 
   test('buildCheckoutLink sends shortened URL when shortener resolves one', async () => {
@@ -80,12 +103,27 @@ describe('WhatsappLinkService', () => {
         items: [{ productName: 'Jean', quantity: 1, total: 120 }],
       },
       { method: 'courier' },
-      { sharedCartUrl: 'https://example.com/api/v1/checkout/shared?token=abc' },
+      {
+        customer: {
+          phone: '932492966',
+          firstName: 'Ana',
+          paternalLastName: 'Perez',
+          maternalLastName: 'Gomez',
+        },
+        sharedCartUrl: 'https://example.com/api/v1/checkout/shared?token=abc',
+      },
     );
 
     expect(result.sharedCartUrl).toBe('https://example.com/api/v1/checkout/shared?token=abc');
     expect(result.shortSharedCartUrl).toBe('https://lnk.ua/abc123');
     expect(shortener.shorten).toHaveBeenCalledWith('https://example.com/api/v1/checkout/shared?token=abc');
-    expect(whatsappClient.buildLink).toHaveBeenCalledWith('https://lnk.ua/abc123');
+    expect(whatsappClient.buildLink).toHaveBeenCalledWith(
+      [
+        'Nombre: Ana Perez Gomez',
+        'Celular: 932492966',
+        'Entrega: Courier',
+        'Carrito: https://lnk.ua/abc123',
+      ].join('\n'),
+    );
   });
 });

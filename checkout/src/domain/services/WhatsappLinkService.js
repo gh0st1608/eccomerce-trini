@@ -8,9 +8,16 @@ function buildCustomerName(customer = {}) {
   ].filter(Boolean).join(' ');
 }
 
-function buildWhatsappMessage(customer, link) {
+function buildWhatsappMessage(customer = {}, delivery = {}, link = '') {
   const customerName = buildCustomerName(customer);
-  return customerName && link ? `${customerName}\n${link}` : link;
+  const deliveryLabel = delivery.method === 'pickup' ? 'Tienda' : 'Courier';
+
+  return [
+    customerName ? `Nombre: ${customerName}` : null,
+    customer.phone ? `Celular: ${customer.phone}` : null,
+    `Entrega: ${deliveryLabel}`,
+    link ? `Carrito: ${link}` : null,
+  ].filter(Boolean).join('\n');
 }
 
 export class WhatsappLinkService extends WhatsappLinkServicePort {
@@ -28,7 +35,7 @@ export class WhatsappLinkService extends WhatsappLinkServicePort {
       : linkToShare;
     const shortSharedCartUrl = shortenedLink && shortenedLink !== linkToShare ? shortenedLink : null;
     const messageLink = shortSharedCartUrl || linkToShare || shortenedLink || '';
-    const message = buildWhatsappMessage(options.customer, messageLink);
+    const message = buildWhatsappMessage(options.customer, delivery, messageLink);
 
     return {
       checkoutUrl: this.whatsappClient.buildLink(message),

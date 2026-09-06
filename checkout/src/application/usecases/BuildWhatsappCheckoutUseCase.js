@@ -1,6 +1,8 @@
 import { NotFoundError, ValidationError } from '../../domain/exceptions/index.js';
 import { Cart } from '../../domain/entities/Cart.js';
 
+const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+
 export class BuildWhatsappCheckoutUseCase {
   constructor({
     productRepository,
@@ -72,12 +74,15 @@ export class BuildWhatsappCheckoutUseCase {
     };
   }
 
-  validateCustomer(customer) {
-    const phone = typeof customer?.phone === 'string' ? customer.phone.trim() : '';
-    const firstName = typeof customer?.firstName === 'string' ? customer.firstName.trim() : '';
-    const lastName = typeof customer?.lastName === 'string' ? customer.lastName.trim() : '';
+  validateCustomer(customer = {}) {
+    const phone = normalizeText(customer.phone);
+    const firstName = normalizeText(customer.firstName);
+    const lastName = normalizeText(customer.lastName);
+    const paternalLastName = normalizeText(customer.paternalLastName);
+    const maternalLastName = normalizeText(customer.maternalLastName);
+    const hasCompleteLastName = Boolean(lastName || (paternalLastName && maternalLastName));
 
-    if (!phone || !firstName || !lastName) {
+    if (!phone || !firstName || !hasCompleteLastName) {
       throw new ValidationError('Customer phone, first name and last name are required');
     }
   }

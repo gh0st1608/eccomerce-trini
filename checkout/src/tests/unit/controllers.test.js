@@ -23,6 +23,33 @@ describe('Controllers', () => {
     expect(res.json).toHaveBeenCalledTimes(1);
   });
 
+  test('checkout controller prefers the configured storefront URL behind API Gateway', async () => {
+    const execute = jest.fn().mockResolvedValue({ checkoutUrl: 'https://wa.me/1' });
+    const req = {
+      context: { traceId: 't1' },
+      body: { items: [] },
+      protocol: 'https',
+      get: jest.fn().mockReturnValue('api-id.execute-api.us-east-1.amazonaws.com'),
+      headers: {
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'api-id.execute-api.us-east-1.amazonaws.com',
+      },
+    };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+    const controller = createCheckoutController({
+      buildWhatsappCheckoutUseCase: { execute },
+      checkoutSharePublicBaseUrl: 'https://AAAA.com/',
+    });
+
+    await controller.checkoutByWhatsapp(req, res, next);
+
+    expect(execute).toHaveBeenCalledWith(req.body, {
+      publicBaseUrl: 'https://AAAA.com',
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   test('checkout controller resolves shared checkout token', async () => {
     const req = { context: { traceId: 't1' }, query: { token: 'signed-token' } };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
@@ -78,6 +105,38 @@ describe('Controllers', () => {
     expect(html).toContain('og:image');
     expect(html).toContain('https://shop.example.com/logo-mayo-collection.png');
     expect(html).toContain('/cart/shared?token=signed-token');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('shared checkout preview redirects to the configured storefront domain', async () => {
+    const req = {
+      context: { traceId: 't1' },
+      query: { token: 'signed-token' },
+      headers: {
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'api-id.execute-api.us-east-1.amazonaws.com',
+      },
+      protocol: 'https',
+      get: jest.fn().mockReturnValue('api-id.execute-api.us-east-1.amazonaws.com'),
+    };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      type: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    };
+    const next = jest.fn();
+    const controller = createCheckoutController({
+      buildWhatsappCheckoutUseCase: { execute: jest.fn() },
+      resolveSharedCheckoutUseCase: { execute: jest.fn() },
+      checkoutSharePublicBaseUrl: 'https://AAAA.com/',
+    });
+
+    await controller.shareCheckoutPreview(req, res, next);
+
+    const html = res.send.mock.calls[0][0];
+    expect(html).toContain('https://AAAA.com/cart/shared?token=signed-token');
+    expect(html).not.toContain('execute-api.amazonaws.com/cart/shared');
     expect(next).not.toHaveBeenCalled();
   });
 });
