@@ -103,7 +103,10 @@ describe('Controllers', () => {
     expect(res.send).toHaveBeenCalledTimes(1);
     const html = res.send.mock.calls[0][0];
     expect(html).toContain('og:image');
-    expect(html).toContain('https://shop.example.com/logo-mayo-collection.png');
+    expect(html).toContain('https://shop.example.com/carrito-compartido-v3.png');
+    expect(html).toContain('<meta property="og:image:width" content="1200" />');
+    expect(html).toContain('<meta property="og:image:height" content="630" />');
+    expect(html).not.toContain('logo-mayo-collection.png');
     expect(html).toContain('/cart/shared?token=signed-token');
     expect(next).not.toHaveBeenCalled();
   });

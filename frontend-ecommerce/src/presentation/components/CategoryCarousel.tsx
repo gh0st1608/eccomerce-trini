@@ -2,6 +2,7 @@ import { Box, Button, HStack, Stack, Text } from '@chakra-ui/react'
 
 export interface CarouselCategory {
   name: string
+  value?: string
   count: number
   imageUrl?: string
 }
@@ -9,6 +10,10 @@ export interface CarouselCategory {
 interface CategoryCarouselProps {
   categories: CarouselCategory[]
   onSelectCategory: (categoryName: string) => void
+}
+
+function formatCategoryName(name: string) {
+  return name.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 export function CategoryCarousel({ categories, onSelectCategory }: CategoryCarouselProps) {
@@ -27,21 +32,24 @@ export function CategoryCarousel({ categories, onSelectCategory }: CategoryCarou
       }}
     >
       <HStack gap={{ base: 3, md: 5 }} align="start" width="max-content" pr={2}>
-        {categories.map((category) => (
-          <Button
-            key={category.name}
-            aria-label={`Ver productos de ${category.name}`}
-            variant="ghost"
-            height="auto"
-            minW="0"
-            p={0}
-            borderRadius="full"
-            color="#3f1d50"
-            _hover={{ bg: 'transparent', color: '#6f3f88' }}
-            onClick={() => onSelectCategory(category.name)}
-            css={{ scrollSnapAlign: 'start' }}
-          >
-            <Stack align="center" gap={2} width={{ base: '76px', md: '96px' }}>
+        {categories.map((category) => {
+          const displayName = formatCategoryName(category.name)
+
+          return (
+            <Button
+              key={category.value ?? category.name}
+              aria-label={`Ver productos de ${displayName}`}
+              variant="ghost"
+              height="auto"
+              minW="0"
+              p={0}
+              borderRadius="full"
+              color="#3f1d50"
+              _hover={{ bg: 'transparent', color: '#6f3f88' }}
+              onClick={() => onSelectCategory(category.value ?? category.name)}
+              css={{ scrollSnapAlign: 'start' }}
+            >
+              <Stack align="center" gap={2} width={{ base: '92px', md: '112px' }}>
               <Box
                 width={{ base: '66px', md: '84px' }}
                 height={{ base: '66px', md: '84px' }}
@@ -74,15 +82,26 @@ export function CategoryCarousel({ categories, onSelectCategory }: CategoryCarou
                   </Box>
                 )}
               </Box>
-              <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="bold" lineClamp={1} textAlign="center" width="100%">
-                {category.name}
-              </Text>
+                <Text
+                  fontSize={{ base: 'xs', md: 'sm' }}
+                  fontWeight="bold"
+                  lineClamp={2}
+                  lineHeight="1.2"
+                  minH="2.4em"
+                  overflowWrap="anywhere"
+                  textAlign="center"
+                  whiteSpace="normal"
+                  width="100%"
+                >
+                  {displayName}
+                </Text>
               <Text color="#76538a" fontSize="xs" lineHeight="1" whiteSpace="nowrap">
                 {category.count} {category.count === 1 ? 'producto' : 'productos'}
               </Text>
-            </Stack>
-          </Button>
-        ))}
+              </Stack>
+            </Button>
+          )
+        })}
       </HStack>
     </Box>
   )

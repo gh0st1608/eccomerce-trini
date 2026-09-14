@@ -1,7 +1,7 @@
 import { BusinessError } from '../../domain/exceptions/index.js';
 import { prepareCategoryImageForStorage } from '../services/prepareCategoryImageForStorage.js';
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SLUG_PATTERN = /^[a-z0-9ñ]+(?:-[a-z0-9ñ]+)*$/;
 
 export class CreateCategoryUseCase {
   constructor({ categoryRepository, productImageStorage = null }) {

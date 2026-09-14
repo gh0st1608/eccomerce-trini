@@ -80,7 +80,7 @@ Request body:
 
 Business rules:
 
-- `slug` must match: `^[a-z0-9]+(?:-[a-z0-9]+)*$`
+- `slug` must match: `^[a-z0-9ñ]+(?:-[a-z0-9ñ]+)*$`
 - `slug` must be unique
 - `parentId` is optional. Categories without it are general categories.
 - A category referenced by `parentId` must exist and must be a general category.

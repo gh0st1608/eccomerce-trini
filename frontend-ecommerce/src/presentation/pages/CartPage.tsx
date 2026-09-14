@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Container,
+  Dialog,
   Flex,
   Heading,
   HStack,
@@ -68,6 +69,7 @@ export function CartPage() {
   const [referenceFirstName, setReferenceFirstName] = useState('')
   const [referencePaternalLastName, setReferencePaternalLastName] = useState('')
   const [referenceMaternalLastName, setReferenceMaternalLastName] = useState('')
+  const [isMissingFieldsDialogOpen, setIsMissingFieldsDialogOpen] = useState(false)
 
   useEffect(() => {
     async function loadPickupStores() {
@@ -104,11 +106,20 @@ export function CartPage() {
     isValidCustomerName(referencePaternalLastName) &&
     isValidCustomerName(referenceMaternalLastName)
 
+  const missingCheckoutFields = [
+    deliveryMethod === null ? 'Modalidad de entrega' : null,
+    deliveryMethod === 'pickup' && selectedPickupStoreId.length === 0
+      ? 'Tienda para retiro'
+      : null,
+    !isValidCustomerPhone(customerPhone) ? 'Celular de contacto (6 a 9 digitos)' : null,
+    !isValidCustomerName(referenceFirstName) ? 'Nombre' : null,
+    !isValidCustomerName(referencePaternalLastName) ? 'Apellido paterno' : null,
+    !isValidCustomerName(referenceMaternalLastName) ? 'Apellido materno' : null,
+  ].filter((field): field is string => field !== null)
+
   const isCheckoutDisabled =
     cartItemsList.length === 0 ||
-    isCheckoutLoading ||
-    !isDeliverySelectionValid ||
-    !isCustomerInfoValid
+    isCheckoutLoading
 
   useEffect(() => {
     if (hasGiftItems) {
@@ -117,8 +128,8 @@ export function CartPage() {
   }, [hasGiftItems])
 
   async function handleCheckout() {
-    if (!isDeliverySelectionValid) {
-      setCheckoutErrorMessage('Selecciona una modalidad de entrega para continuar con WhatsApp.')
+    if (!isDeliverySelectionValid || !isCustomerInfoValid) {
+      setIsMissingFieldsDialogOpen(true)
       return
     }
 
@@ -707,6 +718,41 @@ export function CartPage() {
       </Container>
 
       <MobileBottomNav cartCount={cartItemCount} />
+
+      <Dialog.Root
+        open={isMissingFieldsDialogOpen}
+        onOpenChange={(details) => setIsMissingFieldsDialogOpen(details.open)}
+        placement="center"
+        size="sm"
+      >
+        <Dialog.Backdrop bg="blackAlpha.600" />
+        <Dialog.Positioner px={4}>
+          <Dialog.Content borderRadius="xl" maxW="420px">
+            <Dialog.Header>
+              <Dialog.Title>Completa tus datos</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Text color="#475569" mb={3}>
+                Para continuar con WhatsApp, completa los siguientes campos:
+              </Text>
+              <VStack as="ul" align="stretch" gap={2} pl={5}>
+                {missingCheckoutFields.map((field) => (
+                  <Text as="li" key={field} color="#7f1d1d" fontWeight="semibold">
+                    {field}
+                  </Text>
+                ))}
+              </VStack>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.ActionTrigger asChild>
+                <Button bg="#f51b78" color="white" _hover={{ bg: '#d70d61' }}>
+                  Completar datos
+                </Button>
+              </Dialog.ActionTrigger>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Box>
   )
 }

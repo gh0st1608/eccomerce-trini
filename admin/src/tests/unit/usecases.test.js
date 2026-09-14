@@ -171,6 +171,22 @@ describe('UseCases', () => {
     ).rejects.toBeInstanceOf(BusinessError);
   });
 
+  test('create category accepts a slug with ñ', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 'cat-ninez', slug: 'niñez' });
+    const useCase = new CreateCategoryUseCase({
+      categoryRepository: {
+        findBySlug: jest.fn().mockResolvedValue(null),
+        create,
+      },
+    });
+
+    await useCase.execute({ name: 'Niñez', slug: 'niñez', description: '', active: true });
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Niñez', slug: 'niñez' }),
+    );
+  });
+
   test('create category rejects duplicated slug', async () => {
     const useCase = new CreateCategoryUseCase({
       categoryRepository: {
@@ -350,6 +366,29 @@ describe('UseCases', () => {
     await expect(
       useCase.execute('cat-1', { name: 'Polos', slug: 'camisas', description: '', active: true }),
     ).rejects.toBeInstanceOf(BusinessError);
+  });
+
+  test('update category accepts a slug with ñ', async () => {
+    const update = jest.fn().mockResolvedValue({ id: 'cat-1', slug: 'niños' });
+    const useCase = new UpdateCategoryUseCase({
+      categoryRepository: {
+        findById: jest.fn().mockResolvedValue({ id: 'cat-1' }),
+        findBySlug: jest.fn().mockResolvedValue({ id: 'cat-1' }),
+        update,
+      },
+    });
+
+    await useCase.execute('cat-1', {
+      name: 'Niños',
+      slug: 'niños',
+      description: '',
+      active: true,
+    });
+
+    expect(update).toHaveBeenCalledWith(
+      'cat-1',
+      expect.objectContaining({ name: 'Niños', slug: 'niños' }),
+    );
   });
 
   test('update category rejects when category does not exist', async () => {

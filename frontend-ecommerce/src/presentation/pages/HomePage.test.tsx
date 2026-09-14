@@ -9,11 +9,85 @@ vi.mock('@infrastructure/factories/createProductRepository', () => ({
   createProductRepository: () => new InMemoryProductRepository(),
 }))
 
+vi.mock('@infrastructure/factories/createCategoryRepository', () => ({
+  createCategoryRepository: () => ({
+    list: async () => [
+      { id: '1', name: 'Electronica', slug: 'electronica', description: '', active: true },
+      {
+        id: '2',
+        name: 'Set',
+        slug: 'set',
+        description: '',
+        active: true,
+        parentId: '7',
+      },
+      { id: '3', name: 'Bottoms', slug: 'bottoms', description: '', active: true },
+      { id: '4', name: 'Dress', slug: 'dress', description: '', active: true },
+      { id: '5', name: 'Accessories', slug: 'accessories', description: '', active: false },
+      { id: '6', name: 'Shirts', slug: 'shirts', description: '', active: true },
+      { id: '7', name: 'Moda', slug: 'moda', description: '', active: false },
+    ],
+  }),
+}))
+
 vi.setConfig({ testTimeout: 15000 })
 
 describe('HomePage', () => {
+  const scrollIntoView = vi.fn()
+
   beforeEach(() => {
     window.history.pushState({}, '', '/')
+    scrollIntoView.mockClear()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+  })
+
+  it('filters from the category carousel and moves the view to the catalog', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /ver productos de electronica/i }))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    expect(screen.getByText('1 producto(s) disponibles')).toBeInTheDocument()
+  })
+
+  it('hides inactive categories and children of hidden categories from the carousel', async () => {
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>,
+    )
+
+    await screen.findByRole('button', { name: /ver productos de electronica/i })
+
+    expect(screen.queryByRole('button', { name: /ver productos de set/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /ver productos de accessories/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByText(/set eclipse/i).length).toBeGreaterThan(0)
+  })
+
+  it('moves the view to the filtered catalog when opened from a category link', async () => {
+    window.history.pushState({}, '', '/?category=Set#catalogo-productos')
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>,
+    )
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+      expect(screen.getByText('1 producto(s) disponibles')).toBeInTheDocument()
+    })
   })
 
   it('renders storefront UI, supports search, and navigates to product detail', async () => {

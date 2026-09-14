@@ -44,6 +44,7 @@ import {
 } from '@shared/utils/adminOrderHistory'
 import { BrandLogo } from '@presentation/components/BrandLogo'
 import { formatCurrency } from '@shared/utils/currency'
+import { normalizeSlug } from '@shared/utils/slug'
 import {
   updateOfferFromDiscount,
   updateOfferFromOriginalPrice,
@@ -256,18 +257,6 @@ function isHttpImageReference(value: string | undefined): boolean {
   return value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:image/')
 }
 
-function normalizeSlug(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
 function normalizeCategoryPayload(payload: CreateAdminCategoryInput): CreateAdminCategoryInput {
   const normalizedName = payload.name.trim()
   const normalizedSlugSource = payload.slug.trim().length > 0 ? payload.slug : normalizedName
@@ -288,10 +277,10 @@ function validateCategoryPayload(payload: CreateAdminCategoryInput): { isValid: 
     return { isValid: false, message: 'El nombre de la categoria debe tener al menos 2 caracteres.' }
   }
 
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug)) {
+  if (!/^[a-z0-9ñ]+(?:-[a-z0-9ñ]+)*$/.test(payload.slug)) {
     return {
       isValid: false,
-      message: 'El slug solo puede contener minusculas, numeros y guiones (ej. joyas-finas).',
+      message: 'El slug solo puede contener minusculas, numeros, ñ y guiones (ej. niños-y-niñas).',
     }
   }
 
@@ -1202,7 +1191,7 @@ export function AdminDashboardPage() {
       }
 
       if (error instanceof Error && error.message.includes('Invalid category slug format')) {
-        openFeedback('error', 'Slug invalido', 'Usa solo minusculas, numeros y guiones en el slug (ej. joyas-finas).')
+        openFeedback('error', 'Slug invalido', 'Usa solo minusculas, numeros, ñ y guiones en el slug (ej. niños-y-niñas).')
         return
       }
 
@@ -1212,6 +1201,32 @@ export function AdminDashboardPage() {
       }
 
       openFeedback('error', 'Operacion no completada', 'No fue posible guardar la categoria.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function showCategory(category: AdminCategory) {
+    try {
+      setIsSubmitting(true)
+      const updated = await updateAdminCategoryUseCase.execute({
+        ...category,
+        active: true,
+      })
+
+      setCategories((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)))
+      setProductOptions((prev) => ({
+        ...prev,
+        categories: prev.categories.map((entry) => (entry.id === updated.id ? updated : entry)),
+      }))
+      openFeedback('success', 'Categoria visible', 'La categoria volvera a mostrarse en el storefront.')
+    } catch (error) {
+      if (isUnauthorizedError(error)) {
+        forceLogin()
+        return
+      }
+
+      openFeedback('error', 'Operacion no completada', 'No fue posible mostrar la categoria.')
     } finally {
       setIsSubmitting(false)
     }
@@ -1302,17 +1317,17 @@ export function AdminDashboardPage() {
           return
         }
 
-        await updateAdminCategoryUseCase.execute({
+        const updated = await updateAdminCategoryUseCase.execute({
           ...category,
           active: false,
         })
 
-        setCategories((prev) => prev.filter((entry) => entry.id !== category.id))
+        setCategories((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)))
         setProductOptions((prev) => ({
           ...prev,
-          categories: prev.categories.filter((entry) => entry.id !== category.id),
+          categories: prev.categories.map((entry) => (entry.id === updated.id ? updated : entry)),
         }))
-        openFeedback('success', 'Categoria eliminada', 'La categoria fue desactivada y retirada de la tabla.')
+        openFeedback('success', 'Categoria oculta', 'La categoria dejo de mostrarse en el storefront.')
       }
 
       if (confirmDelete.entity === 'store') {
@@ -1798,15 +1813,28 @@ export function AdminDashboardPage() {
                       <Button size="xs" variant="outline" borderColor="#cbd5e1" onClick={() => openUpdateCategoryModal(category)}>
                         Actualizar
                       </Button>
-                      <Button
-                        size="xs"
-                        bg="#b91c1c"
-                        color="white"
-                        _hover={{ bg: '#991b1b' }}
-                        onClick={() => setConfirmDelete({ isOpen: true, entity: 'category', id: category.id })}
-                      >
-                        Eliminar
-                      </Button>
+                      {category.active ? (
+                        <Button
+                          size="xs"
+                          bg="#b45309"
+                          color="white"
+                          _hover={{ bg: '#92400e' }}
+                          onClick={() => setConfirmDelete({ isOpen: true, entity: 'category', id: category.id })}
+                        >
+                          Ocultar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="xs"
+                          bg="#0f766e"
+                          color="white"
+                          _hover={{ bg: '#115e59' }}
+                          loading={isSubmitting}
+                          onClick={() => void showCategory(category)}
+                        >
+                          Mostrar
+                        </Button>
+                      )}
                     </HStack>
                   </Box>
                 </Box>
@@ -2137,8 +2165,8 @@ export function AdminDashboardPage() {
                 style={{ ...comboStyle, borderColor: productFormErrors.category ? '#b91c1c' : '#cbd5e1' }}
               >
                 <option value="">Selecciona una categoria</option>
-                {productOptions.categories
-                  .filter((category) => category.active)
+                {categories
+                  .filter((category) => category.active && Boolean(category.parentId))
                   .map((category) => (
                     <option key={category.id} value={category.slug}>
                       {category.name}
@@ -2175,8 +2203,8 @@ export function AdminDashboardPage() {
               }
               style={{ ...comboStyle, minHeight: '128px' }}
             >
-              {productOptions.categories
-                .filter((category) => category.active)
+              {categories
+                .filter((category) => category.active && Boolean(category.parentId))
                 .map((category) => (
                   <option key={category.id} value={category.slug}>
                     {category.name}
@@ -3646,7 +3674,7 @@ export function AdminDashboardPage() {
 
       <ModalShell
         isOpen={Boolean(confirmDelete?.isOpen)}
-        title="Confirmar eliminacion"
+        title={confirmDelete?.entity === 'category' ? 'Confirmar ocultamiento' : 'Confirmar eliminacion'}
         onClose={() => setConfirmDelete(null)}
       >
         <VStack align="stretch" gap={4}>
@@ -3654,14 +3682,14 @@ export function AdminDashboardPage() {
             {confirmDelete?.entity === 'product'
               ? 'Vas a eliminar este producto (se marcara como inactivo).'
               : confirmDelete?.entity === 'category'
-                ? 'Vas a eliminar esta categoria (se desactivara).'
+                ? 'La categoria dejara de mostrarse en el carrusel y en la vista de categorias. Podras volver a mostrarla desde el filtro Inactivas.'
                 : confirmDelete?.entity === 'store'
                   ? 'Vas a eliminar esta tienda (se desactivara).'
                   : 'Vas a eliminar esta orden del listado.' }
           </Text>
           <HStack>
             <Button bg="#b91c1c" color="white" _hover={{ bg: '#991b1b' }} loading={isSubmitting} onClick={() => void handleDelete()}>
-              Confirmar
+              {confirmDelete?.entity === 'category' ? 'Ocultar categoria' : 'Confirmar'}
             </Button>
             <Button variant="outline" borderColor="#cbd5e1" onClick={() => setConfirmDelete(null)}>
               Cancelar

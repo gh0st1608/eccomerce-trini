@@ -192,7 +192,11 @@ export function CategoriesPage() {
                         borderRadius="md"
                         textAlign="left"
                         cursor="pointer"
-                        onClick={() => navigate(`/?category=${encodeURIComponent(category.slug)}`)}
+                        onClick={() =>
+                          navigate(
+                            `/?category=${encodeURIComponent(category.slug)}#catalogo-productos`,
+                          )
+                        }
                         aria-label={`Ver productos de ${category.name}`}
                       >
                         <Box

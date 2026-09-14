@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Box,
@@ -13,7 +13,10 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { GetFeaturedProductsUseCase } from '@application/use-cases/GetFeaturedProductsUseCase'
+import { ListCategoriesUseCase } from '@application/use-cases/ListCategoriesUseCase'
+import type { AdminCategory } from '@domain/entities/AdminCategory'
 import type { Product } from '@domain/entities/Product'
+import { createCategoryRepository } from '@infrastructure/factories/createCategoryRepository'
 import { createProductRepository } from '@infrastructure/factories/createProductRepository'
 import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
 import { CatalogFilters } from '@presentation/components/CatalogFilters'
@@ -28,11 +31,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 export function HomePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const catalogRef = useRef<HTMLDivElement>(null)
+  const requestedCategory = searchParams.get('category')
   const [products, setProducts] = useState<Product[]>([])
+  const [categoryDefinitions, setCategoryDefinitions] = useState<AdminCategory[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState(
-    () => searchParams.get('category') ?? 'Todos',
-  )
+  const [selectedCategory, setSelectedCategory] = useState(() => requestedCategory ?? 'Todos')
   const [selectedMaxPrice, setSelectedMaxPrice] = useState(0)
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false)
   const [sortMode, setSortMode] = useState<'featured' | 'priceAsc' | 'priceDesc'>('featured')
@@ -47,16 +51,34 @@ export function HomePage() {
   }, [])
 
   const categories = useMemo<CarouselCategory[]>(() => {
-    const categorySet = new Set(products.map((product) => product.category))
+    const categoryBySlug = new Map(
+      categoryDefinitions.map((category) => [category.slug.toLowerCase(), category]),
+    )
+    const categoryById = new Map(categoryDefinitions.map((category) => [category.id, category]))
+    const visibleCategorySlugs = Array.from(new Set(products.map((product) => product.category))).filter(
+      (slug) => {
+        const category = categoryBySlug.get(slug.toLowerCase())
+        const parentCategory = category?.parentId ? categoryById.get(category.parentId) : undefined
+        return category?.active === true && (!parentCategory || parentCategory.active)
+      },
+    )
+
     return [
       { name: 'Todos', count: products.length },
-      ...Array.from(categorySet).map((name) => ({
-        name,
-        count: products.filter((product) => product.category === name).length,
-        imageUrl: products.find((product) => product.category === name)?.imageUrl,
-      })),
+      ...visibleCategorySlugs.map((slug) => {
+        const categoryDefinition = categoryBySlug.get(slug.toLowerCase())
+
+        return {
+          name: categoryDefinition?.name ?? slug,
+          value: slug,
+          count: products.filter((product) => product.category === slug).length,
+          imageUrl:
+            categoryDefinition?.imageUrl ??
+            products.find((product) => product.category === slug)?.imageUrl,
+        }
+      }),
     ]
-  }, [products])
+  }, [categoryDefinitions, products])
 
   const minPrice = useMemo(() => {
     if (products.length === 0) return 0
@@ -158,6 +180,30 @@ export function HomePage() {
 
     void loadProducts()
   }, [getFeaturedProductsUseCase])
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const useCase = new ListCategoriesUseCase(createCategoryRepository())
+        setCategoryDefinitions(await useCase.execute())
+      } catch {
+        setCategoryDefinitions([])
+      }
+    }
+
+    void loadCategories()
+  }, [])
+
+  useEffect(() => {
+    if (requestedCategory && !isLoading) {
+      catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [isLoading, requestedCategory])
+
+  function selectCategory(categoryName: string) {
+    setSelectedCategory(categoryName)
+    catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   function resetFilters() {
     setSearchTerm('')
@@ -289,9 +335,16 @@ export function HomePage() {
             </Alert.Root>
           ) : null}
 
-          <CategoryCarousel categories={categories} onSelectCategory={setSelectedCategory} />
+          <CategoryCarousel categories={categories} onSelectCategory={selectCategory} />
 
-          <Flex direction={{ base: 'column', xl: 'row' }} gap={{ base: 4, md: 6 }} align="start">
+          <Flex
+            ref={catalogRef}
+            id="catalogo-productos"
+            scrollMarginTop={{ base: '72px', md: '96px' }}
+            direction={{ base: 'column', xl: 'row' }}
+            gap={{ base: 4, md: 6 }}
+            align="start"
+          >
             <Box width={{ base: '100%', xl: '280px' }}>
               <CatalogFilters
                 minPrice={minPrice}
