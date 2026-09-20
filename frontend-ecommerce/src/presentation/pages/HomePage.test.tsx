@@ -1,9 +1,14 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { defaultStorefrontSettings, type StorefrontSettings } from '@domain/entities/StorefrontSettings'
 import { AppProviders } from '@presentation/providers/AppProviders'
 import { AppRouter } from '@presentation/routes/AppRouter'
 import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
+
+const { getStorefrontSettings } = vi.hoisted(() => ({
+  getStorefrontSettings: vi.fn(),
+}))
 
 vi.mock('@infrastructure/factories/createProductRepository', () => ({
   createProductRepository: () => new InMemoryProductRepository(),
@@ -31,6 +36,12 @@ vi.mock('@infrastructure/factories/createCategoryRepository', () => ({
   }),
 }))
 
+vi.mock('@infrastructure/factories/createStorefrontSettingsRepository', () => ({
+  createStorefrontSettingsRepository: () => ({
+    get: getStorefrontSettings,
+  }),
+}))
+
 vi.setConfig({ testTimeout: 15000 })
 
 describe('HomePage', () => {
@@ -39,6 +50,8 @@ describe('HomePage', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/')
     scrollIntoView.mockClear()
+    getStorefrontSettings.mockReset()
+    getStorefrontSettings.mockResolvedValue(defaultStorefrontSettings)
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
       configurable: true,
       value: scrollIntoView,
@@ -108,6 +121,36 @@ describe('HomePage', () => {
     })
   })
 
+  it('does not flash a disabled promo banner while loading a category link', async () => {
+    let resolveSettings!: (settings: StorefrontSettings) => void
+    getStorefrontSettings.mockReturnValueOnce(
+      new Promise<StorefrontSettings>((resolve) => {
+        resolveSettings = resolve
+      }),
+    )
+    window.history.pushState({}, '', '/?category=Set#catalogo-productos')
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>,
+    )
+
+    expect(screen.queryByText(/oferta de temporada/i)).not.toBeInTheDocument()
+
+    await act(async () => {
+      resolveSettings({
+        ...defaultStorefrontSettings,
+        promoBanner: {
+          ...defaultStorefrontSettings.promoBanner,
+          enabled: false,
+        },
+      })
+    })
+
+    expect(screen.queryByText(/oferta de temporada/i)).not.toBeInTheDocument()
+  })
+
   it('renders storefront UI, supports search, and navigates to product detail', async () => {
     const user = userEvent.setup()
 
@@ -118,7 +161,7 @@ describe('HomePage', () => {
     )
 
     expect(
-      screen.getByRole('heading', {
+      await screen.findByRole('heading', {
         name: /hasta 30% off en prendas seleccionadas/i,
       }),
     ).toBeInTheDocument()

@@ -42,7 +42,7 @@ export function HomePage() {
   const requestedCategory = searchParams.get('category')
   const [products, setProducts] = useState<Product[]>([])
   const [categoryDefinitions, setCategoryDefinitions] = useState<AdminCategory[]>([])
-  const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(defaultStorefrontSettings)
+  const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(() => requestedCategory ?? 'Todos')
   const [selectedMaxPrice, setSelectedMaxPrice] = useState(0)
@@ -284,12 +284,14 @@ export function HomePage() {
 
       <Container maxW="7xl" py={{ base: 4, md: 10 }} pb={{ base: 20, md: 10 }}>
         <VStack align="stretch" gap={{ base: 4, md: 8 }}>
-          <CatalogPromoBanner
-            banner={storefrontSettings.promoBanner}
-            cartCount={cartItemCount}
-            onShowOffers={() => setShowFeaturedOnly(true)}
-            onOpenCart={() => navigate('/cart')}
-          />
+          {storefrontSettings ? (
+            <CatalogPromoBanner
+              banner={storefrontSettings.promoBanner}
+              cartCount={cartItemCount}
+              onShowOffers={() => setShowFeaturedOnly(true)}
+              onOpenCart={() => navigate('/cart')}
+            />
+          ) : null}
 
           {errorMessage ? (
             <Alert.Root status="warning" borderRadius="xl" variant="subtle">
