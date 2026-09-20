@@ -64,6 +64,7 @@ export const env = {
   dynamoDbTableStores: process.env.DYNAMODB_TABLE_STORES,
   dynamoDbTableInternalUsers: process.env.DYNAMODB_TABLE_INTERNAL_USERS,
   dynamoDbTableStorefrontSettings: process.env.DYNAMODB_TABLE_STOREFRONT_SETTINGS,
+  dynamoDbTableOrders: process.env.DYNAMODB_TABLE_ORDERS,
   newRelicLicenseKey: process.env.NEW_RELIC_LICENSE_KEY,
   newRelicAppName: process.env.NEW_RELIC_APP_NAME,
   otelServiceName: process.env.OTEL_SERVICE_NAME,
@@ -78,6 +79,7 @@ export const env = {
   adminAuthPassword: process.env.ADMIN_AUTH_PASSWORD ?? 'admin123',
   adminAuthToken: process.env.ADMIN_AUTH_TOKEN ?? 'trini-admin-local-token',
   publicApiToken: process.env.PUBLIC_API_TOKEN ?? 'trini-public-readonly-token',
+  checkoutServiceToken: process.env.CHECKOUT_SERVICE_TOKEN ?? 'trini-checkout-service-token',
   databaseUrl: process.env.DATABASE_URL,
   corsAllowedOrigins: parseList(process.env.CORS_ALLOWED_ORIGINS),
   corsAllowedOriginPatterns: parseRegexList(process.env.CORS_ALLOWED_ORIGIN_PATTERNS),
@@ -101,7 +103,8 @@ if (
     || !env.dynamoDbTableCategories
     || !env.dynamoDbTableStores
     || !env.dynamoDbTableInternalUsers
-    || !env.dynamoDbTableStorefrontSettings)
+    || !env.dynamoDbTableStorefrontSettings
+    || !env.dynamoDbTableOrders)
 ) {
   throw new Error(
     'Missing DYNAMODB_TABLE_* env vars when PERSISTENCE_DRIVER=dynamodb',

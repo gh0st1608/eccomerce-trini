@@ -34,7 +34,6 @@ import { StoreHeader } from '@presentation/components/StoreHeader'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@presentation/providers/cart-context'
-import { registerCheckoutOrder } from '@shared/utils/adminOrderHistory'
 import type { PickupStore } from '@domain/entities/PickupStore'
 import { HomeIcon, MinusIcon, PlusIcon } from '@presentation/components/UiIcons'
 
@@ -154,16 +153,6 @@ export function CartPage() {
           : { method: 'courier' },
         checkoutCustomer,
       )
-      registerCheckoutOrder({
-        items: cartItemsList,
-        subtotal: cartSubtotal,
-        checkoutUrl: checkoutLinks.checkoutUrl,
-        sharedCartUrl: checkoutLinks.sharedCartUrl ?? undefined,
-        shortSharedCartUrl: checkoutLinks.shortSharedCartUrl ?? undefined,
-        customerPhone: checkoutCustomer.phone,
-        referenceFirstName: checkoutCustomer.firstName,
-        referenceLastName: `${checkoutCustomer.paternalLastName} ${checkoutCustomer.maternalLastName}`,
-      })
       window.open(checkoutLinks.checkoutUrl, '_blank', 'noopener,noreferrer')
       clearCart()
       navigate('/')

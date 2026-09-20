@@ -82,6 +82,10 @@ export class FetchHttpClient implements HttpClient {
         throw new Error(`HTTP ${response.status}: ${backendMessage ?? response.statusText}`)
       }
 
+      if (response.status === 204) {
+        return undefined as T
+      }
+
       return (await response.json()) as T
     } finally {
       clearTimeout(timeoutId)

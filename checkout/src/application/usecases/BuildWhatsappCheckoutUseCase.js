@@ -9,11 +9,13 @@ export class BuildWhatsappCheckoutUseCase {
     storeRepository,
     whatsappLinkService,
     checkoutShareLinkService = null,
+    orderClient = null,
   }) {
     this.productRepository = productRepository;
     this.storeRepository = storeRepository;
     this.whatsappLinkService = whatsappLinkService;
     this.checkoutShareLinkService = checkoutShareLinkService;
+    this.orderClient = orderClient;
   }
 
   async execute(payload, options = {}) {
@@ -23,14 +25,40 @@ export class BuildWhatsappCheckoutUseCase {
 
     this.validateCustomer(payload.customer);
     this.validateGiftDelivery(payload.items, payload.delivery);
+    const enrichedItems = await this.enrichItems(payload.items);
+    const deliveryDetails = await this.resolveDelivery(payload.delivery);
+    const cart = new Cart({ items: enrichedItems });
+    const sharedCartUrl = this.checkoutShareLinkService
+      ? this.checkoutShareLinkService.buildUrl(cart, deliveryDetails, options.publicBaseUrl)
+      : null;
+    const result = await this.whatsappLinkService.buildCheckoutLink(cart, deliveryDetails, {
+      sharedCartUrl,
+      customer: payload.customer,
+    });
+    const order = await this.persistOrder(payload.customer, enrichedItems, deliveryDetails, result);
+    await this.productRepository.registerCheckoutItems(
+      enrichedItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        color: item.color,
+        size: item.size,
+      })),
+    );
 
+    return {
+      ...result,
+      sharedCartUrl,
+      orderId: order?.id,
+    };
+  }
+
+  async enrichItems(items) {
     const enrichedItems = [];
-    for (const item of payload.items) {
+    for (const item of items) {
       const product = await this.productRepository.findById(item.productId);
       if (!product) {
         throw new NotFoundError(`Product ${item.productId} not found`);
       }
-
       enrichedItems.push({
         productId: product.id,
         productName: product.name,
@@ -46,32 +74,37 @@ export class BuildWhatsappCheckoutUseCase {
         isGift: item.isGift === true,
       });
     }
+    return enrichedItems;
+  }
 
-    const deliveryDetails = await this.resolveDelivery(payload.delivery);
-    const cart = new Cart({ items: enrichedItems });
-
-    const sharedCartUrl = this.checkoutShareLinkService
-      ? this.checkoutShareLinkService.buildUrl(cart, deliveryDetails, options.publicBaseUrl)
-      : null;
-
-    const result = await this.whatsappLinkService.buildCheckoutLink(cart, deliveryDetails, {
-      sharedCartUrl,
-      customer: payload.customer,
-    });
-
-    await this.productRepository.registerCheckoutItems(
-      enrichedItems.map((item) => ({
+  async persistOrder(customer, items, delivery, checkout) {
+    if (!this.orderClient) {
+      return null;
+    }
+    return this.orderClient.create({
+      checkoutUrl: checkout.checkoutUrl,
+      sharedCartUrl: checkout.sharedCartUrl ?? undefined,
+      shortSharedCartUrl: checkout.shortSharedCartUrl ?? undefined,
+      customerPhone: normalizeText(customer.phone),
+      referenceFirstName: normalizeText(customer.firstName),
+      referenceLastName: [
+        normalizeText(customer.paternalLastName || customer.lastName),
+        normalizeText(customer.maternalLastName),
+      ].filter(Boolean).join(' '),
+      itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+      subtotal: checkout.subtotal,
+      delivery,
+      items: items.map((item) => ({
         productId: item.productId,
+        productName: item.productName,
+        imageUrl: item.imageUrl || undefined,
         quantity: item.quantity,
-        color: item.color,
-        size: item.size,
+        unitPrice: item.unitPrice,
+        selectedColor: item.color,
+        selectedSize: item.size,
+        isGift: item.isGift,
       })),
-    );
-
-    return {
-      ...result,
-      sharedCartUrl,
-    };
+    });
   }
 
   validateCustomer(customer = {}) {

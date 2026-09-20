@@ -147,6 +147,57 @@ describe('Use Cases', () => {
     expect(result.sharedCartUrl).toBe('https://example.com/api/v1/checkout/shared?token=abc');
   });
 
+  test('BuildWhatsappCheckoutUseCase persists the order and returns its id', async () => {
+    const createOrder = jest.fn().mockResolvedValue({ id: 'order-123' });
+    const useCase = new BuildWhatsappCheckoutUseCase({
+      productRepository: {
+        findById: jest.fn().mockResolvedValue({
+          id: 'SKU-001',
+          name: 'Conjunto deportivo',
+          imageUrl: 'https://example.com/product.jpg',
+          category: 'deportivo',
+          price: 45,
+        }),
+        registerCheckoutItems: jest.fn(),
+      },
+      storeRepository: { findById: jest.fn() },
+      whatsappLinkService: {
+        buildCheckoutLink: jest.fn().mockResolvedValue({
+          checkoutUrl: 'https://wa.me/test',
+          sharedCartUrl: 'https://example.com/cart/shared?token=abc',
+          subtotal: 90,
+        }),
+      },
+      orderClient: { create: createOrder },
+    });
+
+    const result = await useCase.execute({
+      items: [{ productId: 'SKU-001', quantity: 2, color: 'Negro', size: 'M' }],
+      customer: {
+        phone: '999999999',
+        firstName: 'Ana',
+        paternalLastName: 'Perez',
+        maternalLastName: 'Gomez',
+      },
+      delivery: { method: 'courier' },
+    });
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      customerPhone: '999999999',
+      referenceFirstName: 'Ana',
+      referenceLastName: 'Perez Gomez',
+      itemCount: 2,
+      subtotal: 90,
+      items: [expect.objectContaining({
+        productId: 'SKU-001',
+        quantity: 2,
+        selectedColor: 'Negro',
+        selectedSize: 'M',
+      })],
+    }));
+    expect(result.orderId).toBe('order-123');
+  });
+
   test('BuildWhatsappCheckoutUseCase registers checkout items for featured ranking', async () => {
     const registerCheckoutItems = jest.fn().mockResolvedValue(undefined);
     const useCase = new BuildWhatsappCheckoutUseCase({

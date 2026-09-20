@@ -24,7 +24,7 @@ export const adminOrderDtoSchema = z.object({
   referenceLastName: z.string().optional().default(''),
   itemCount: z.coerce.number().int(),
   subtotal: z.coerce.number(),
-  source: z.enum(['api', 'local-checkout-history']).default('api'),
+  source: z.literal('api').default('api'),
   items: z.array(adminOrderItemDtoSchema).default([]),
 })
 
@@ -37,4 +37,10 @@ export const adminOrderListResponseSchema = z.union([
   z.object({ success: z.boolean(), data: z.object({ orders: z.array(adminOrderDtoSchema) }) }),
 ])
 
+export const adminOrderResponseSchema = z.union([
+  adminOrderDtoSchema,
+  z.object({ data: z.object({ order: adminOrderDtoSchema }) }),
+])
+
 export type AdminOrderListResponse = z.infer<typeof adminOrderListResponseSchema>
+export type AdminOrderResponse = z.infer<typeof adminOrderResponseSchema>

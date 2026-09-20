@@ -36,6 +36,10 @@ output "dynamodb_table_internal_users" {
   value = aws_dynamodb_table.internal_users.name
 }
 
+output "dynamodb_table_orders" {
+  value = aws_dynamodb_table.orders.name
+}
+
 output "frontend_bucket_name" {
   value = aws_s3_bucket.frontend.bucket
 }

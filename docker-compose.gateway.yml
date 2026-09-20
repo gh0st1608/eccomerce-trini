@@ -6,6 +6,9 @@ services:
     profiles: ["backend","gateway"]
     env_file:
       - ./checkout/.env
+    environment:
+      ADMIN_API_BASE_URL: http://admin-api:3001/api/v1/admin
+      CHECKOUT_SERVICE_TOKEN: ${CHECKOUT_SERVICE_TOKEN:-trini-checkout-service-token}
     expose:
       - "3000"
     ports:
@@ -26,6 +29,8 @@ services:
     profiles: ["backend","gateway"]
     env_file:
       - ./admin/.env
+    environment:
+      CHECKOUT_SERVICE_TOKEN: ${CHECKOUT_SERVICE_TOKEN:-trini-checkout-service-token}
     expose:
       - "3001"
     ports:

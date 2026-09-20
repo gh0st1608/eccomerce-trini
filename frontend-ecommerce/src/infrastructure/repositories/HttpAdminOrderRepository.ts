@@ -4,14 +4,11 @@ import type { HttpClient } from '@infrastructure/clients/HttpClient'
 import {
   adminOrderDtoSchema,
   adminOrderListResponseSchema,
+  adminOrderResponseSchema,
   type AdminOrderDto,
   type AdminOrderListResponse,
+  type AdminOrderResponse,
 } from '@infrastructure/dto/AdminOrderDto'
-import {
-  applyOrderPaymentStatusOverrides,
-  applyOrderStatusOverrides,
-  getLocalCheckoutOrders,
-} from '@shared/utils/adminOrderHistory'
 
 function mapOrderDtoToDomain(dto: AdminOrderDto): AdminOrder {
   const parsed = adminOrderDtoSchema.parse(dto)
@@ -57,6 +54,11 @@ function mapOrderListResponse(response: AdminOrderListResponse): AdminOrder[] {
   return parsed.data.orders.map(mapOrderDtoToDomain)
 }
 
+function mapOrderResponse(response: AdminOrderResponse): AdminOrder {
+  const parsed = adminOrderResponseSchema.parse(response)
+  return mapOrderDtoToDomain('data' in parsed ? parsed.data.order : parsed)
+}
+
 export class HttpAdminOrderRepository implements AdminOrderRepository {
   private readonly httpClient: HttpClient
 
@@ -65,14 +67,24 @@ export class HttpAdminOrderRepository implements AdminOrderRepository {
   }
 
   async list(): Promise<AdminOrder[]> {
-    try {
-      const response = await this.httpClient.get<AdminOrderListResponse>('/orders/whatsapp')
-      const apiOrders = mapOrderListResponse(response).map((order) => ({ ...order, source: 'api' as const }))
-      return applyOrderPaymentStatusOverrides(applyOrderStatusOverrides(apiOrders)).sort(
-        (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
-      )
-    } catch {
-      return applyOrderPaymentStatusOverrides(applyOrderStatusOverrides(getLocalCheckoutOrders()))
-    }
+    const response = await this.httpClient.get<AdminOrderListResponse>('/orders')
+    return mapOrderListResponse(response).sort(
+      (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    )
+  }
+
+  async update(
+    id: string,
+    changes: Partial<Pick<AdminOrder, 'status' | 'paymentStatus'>>,
+  ): Promise<AdminOrder> {
+    const response = await this.httpClient.put<AdminOrderResponse, typeof changes>(
+      `/orders/${encodeURIComponent(id)}`,
+      changes,
+    )
+    return mapOrderResponse(response)
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.httpClient.delete<void>(`/orders/${encodeURIComponent(id)}`)
   }
 }

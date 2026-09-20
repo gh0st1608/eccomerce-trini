@@ -26,7 +26,6 @@ import { CatalogPromoBanner } from '@presentation/components/CatalogPromoBanner'
 import { CategoryCarousel, type CarouselCategory } from '@presentation/components/CategoryCarousel'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { ProductCard } from '@presentation/components/ProductCard'
-import { ProductDetailPanel } from '@presentation/components/ProductDetailPanel'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -48,7 +47,6 @@ export function HomePage() {
   const [selectedMaxPrice, setSelectedMaxPrice] = useState(0)
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false)
   const [sortMode, setSortMode] = useState<'featured' | 'priceAsc' | 'priceDesc'>('featured')
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const { cartItemsList, cartItemCount, addToCart } = useCart()
@@ -164,18 +162,6 @@ export function HomePage() {
     return [...list].sort((a, b) => Number(b.featured) - Number(a.featured))
   }, [products, productCategorySlugsByGeneralSlug, searchTerm, selectedCategory, selectedMaxPrice, showFeaturedOnly, sortMode])
 
-  const visibleSelectedProduct = useMemo(() => {
-    if (!selectedProduct) {
-      return filteredProducts[0] ?? null
-    }
-
-    return (
-      filteredProducts.find((product) => product.id === selectedProduct.id) ??
-      filteredProducts[0] ??
-      null
-    )
-  }, [filteredProducts, selectedProduct])
-
   const groupedProductsByCategory = useMemo(() => {
     const categoryMap = new Map<string, Product[]>()
 
@@ -206,7 +192,6 @@ export function HomePage() {
             ? Math.ceil(Math.max(...fetchedProducts.map((product) => product.price)))
             : 0
         setProducts(fetchedProducts)
-        setSelectedProduct(fetchedProducts[0] ?? null)
         setSelectedMaxPrice(maxFetchedPrice)
       } catch {
         const fallbackRepository = new InMemoryProductRepository()
@@ -216,7 +201,6 @@ export function HomePage() {
             ? Math.ceil(Math.max(...fallbackProducts.map((product) => product.price)))
             : 0
         setProducts(fallbackProducts)
-        setSelectedProduct(fallbackProducts[0] ?? null)
         setSelectedMaxPrice(maxFallbackPrice)
         setErrorMessage('Mostrando catalogo local temporal por indisponibilidad de API.')
       } finally {
@@ -467,15 +451,6 @@ export function HomePage() {
               </Stack>
             </Box>
 
-            <Box display={{ base: 'none', xl: 'block' }} width={{ base: '100%', xl: '380px' }}>
-              <ProductDetailPanel
-                product={visibleSelectedProduct}
-                quantityInCart={
-                  visibleSelectedProduct ? (quantityByProductId[visibleSelectedProduct.id] ?? 0) : 0
-                }
-                onAddToCart={addToCart}
-              />
-            </Box>
           </Flex>
 
         </VStack>

@@ -45,12 +45,14 @@ export const checkoutResponseSchema = z.union([
     checkoutUrl: z.string().url(),
     sharedCartUrl: z.string().url().nullable().optional(),
     shortSharedCartUrl: z.string().url().nullable().optional(),
+    orderId: z.string().optional(),
   }),
   z.object({
     data: z.object({
       checkoutUrl: z.string().url(),
       sharedCartUrl: z.string().url().nullable().optional(),
       shortSharedCartUrl: z.string().url().nullable().optional(),
+      orderId: z.string().optional(),
     }),
   }),
   z.object({
@@ -59,6 +61,7 @@ export const checkoutResponseSchema = z.union([
       checkoutUrl: z.string().url(),
       sharedCartUrl: z.string().url().nullable().optional(),
       shortSharedCartUrl: z.string().url().nullable().optional(),
+      orderId: z.string().optional(),
     }),
   }),
 ])

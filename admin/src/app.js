@@ -22,6 +22,8 @@ import {
 } from './infrastructure/routes/storefront-settings.routes.js';
 import { createAuthRouter } from './infrastructure/routes/auth.routes.js';
 import { createHealthRouter } from './infrastructure/routes/health.routes.js';
+import { createOrderRouter } from './infrastructure/routes/order.routes.js';
+import { createCheckoutOrderRouter } from './infrastructure/routes/checkout-order.routes.js';
 import { adminAuthMiddleware } from './infrastructure/middlewares/admin-auth.middleware.js';
 import { publicReadAuthMiddleware } from './infrastructure/middlewares/public-read-auth.middleware.js';
 
@@ -73,6 +75,10 @@ export const createApp = ({ logger, controllers }) => {
   app.use(sanitizeMiddleware);
 
   app.use('/api/v1/admin/auth', createAuthRouter({ authController: controllers.authController }));
+  app.use(
+    '/api/v1/admin',
+    createCheckoutOrderRouter({ orderController: controllers.orderController }),
+  );
   // Public: read-only token (or the full admin token) grants access to these GET-only endpoints.
   app.use(
     '/api/v1/admin',
@@ -115,6 +121,11 @@ export const createApp = ({ logger, controllers }) => {
     '/api/v1/admin',
     adminAuthMiddleware,
     createStoreRouter({ storeController: controllers.storeController }),
+  );
+  app.use(
+    '/api/v1/admin',
+    adminAuthMiddleware,
+    createOrderRouter({ orderController: controllers.orderController }),
   );
   app.use(
     '/api/v1/admin',

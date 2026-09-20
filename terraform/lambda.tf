@@ -61,6 +61,7 @@ resource "aws_lambda_function" "checkout_api" {
       LNKUA_BEARER_TOKEN             = var.lnkua_bearer_token
       ADMIN_API_BASE_URL             = var.admin_api_base_url
       PUBLIC_API_TOKEN               = var.public_api_token
+      CHECKOUT_SERVICE_TOKEN         = var.checkout_service_token
     }
   }
 }
@@ -118,10 +119,11 @@ resource "aws_lambda_function" "admin_api" {
       ENABLE_LOGGING = "true"
 
       # Admin authentication
-      ADMIN_AUTH_USERNAME = var.admin_auth_username
-      ADMIN_AUTH_PASSWORD = var.admin_auth_password
-      ADMIN_AUTH_TOKEN    = var.admin_auth_token
-      PUBLIC_API_TOKEN    = var.public_api_token
+      ADMIN_AUTH_USERNAME    = var.admin_auth_username
+      ADMIN_AUTH_PASSWORD    = var.admin_auth_password
+      ADMIN_AUTH_TOKEN       = var.admin_auth_token
+      PUBLIC_API_TOKEN       = var.public_api_token
+      CHECKOUT_SERVICE_TOKEN = var.checkout_service_token
 
       # Product image storage
       PRODUCT_IMAGE_STORAGE_ENABLED = tostring(var.product_image_storage_enabled)
@@ -139,6 +141,7 @@ resource "aws_lambda_function" "admin_api" {
       DYNAMODB_TABLE_STORES              = aws_dynamodb_table.stores.name
       DYNAMODB_TABLE_INTERNAL_USERS      = aws_dynamodb_table.internal_users.name
       DYNAMODB_TABLE_STOREFRONT_SETTINGS = aws_dynamodb_table.storefront_settings.name
+      DYNAMODB_TABLE_ORDERS              = aws_dynamodb_table.orders.name
     }
   }
 }

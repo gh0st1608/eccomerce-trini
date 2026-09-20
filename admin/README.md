@@ -94,11 +94,17 @@ Para probar carga de imagenes sin una cuenta AWS real:
 - `PUT /api/v1/admin/categories/:id`
 - `GET /api/v1/admin/internal-users`
 - `POST /api/v1/admin/internal-users`
+- `GET /api/v1/admin/orders`
+- `PUT /api/v1/admin/orders/:id`
+- `DELETE /api/v1/admin/orders/:id`
+- `POST /api/v1/admin/orders` (autenticacion interna con `CHECKOUT_SERVICE_TOKEN`)
 - `GET /health`
 - `GET /ready`
 - `GET /live`
 
-Nota: todos los endpoints bajo `/api/v1/admin` excepto `/auth/login` requieren header `Authorization: Bearer <token>`.
+Nota: los endpoints administrativos requieren `Authorization: Bearer <ADMIN_AUTH_TOKEN>`.
+La creacion de ordenes usa un token servicio-a-servicio separado que debe coincidir
+con `CHECKOUT_SERVICE_TOKEN` en `checkout`.
 
 Contrato de integracion para frontend admin: `docs/admin-api-contract.md`.
 

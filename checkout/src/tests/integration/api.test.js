@@ -18,8 +18,15 @@ describe('API integration', () => {
         ? { id: 'store-001', name: 'Trini Miraflores', address: 'Av. Larco 512', district: 'Miraflores', active: true, pickupEnabled: true }
         : null),
   };
+  const fakeOrderClient = {
+    create: async (order) => ({ ...order, id: 'order-test-1' }),
+  };
   const { logger, controllers } = createContainer({
-    overrides: { productRepository: fakeProductRepository, storeRepository: fakeStoreRepository },
+    overrides: {
+      productRepository: fakeProductRepository,
+      storeRepository: fakeStoreRepository,
+      orderClient: fakeOrderClient,
+    },
   });
   const app = createApp({ logger, controllers });
 
@@ -36,6 +43,7 @@ describe('API integration', () => {
       delivery: { method: 'courier' },
     });
     expect(response.status).toBe(201);
+    expect(response.body.data.orderId).toBe('order-test-1');
     expect(response.body.data.checkoutUrl).toContain('https://wa.me/');
     expect(response.body.data.sharedCartUrl).toContain('/api/v1/checkout/share?token=');
 

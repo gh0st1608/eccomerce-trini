@@ -50,7 +50,7 @@ describe('WhatsappLinkService', () => {
 
     expect(result.checkoutUrl).toBe('https://wa.me/1');
     expect(result.subtotal).toBe(100);
-    expect(result.itemCount).toBe(1);
+    expect(result.itemCount).toBe(2);
     expect(whatsappClient.buildLink).toHaveBeenCalledWith(
       'Entrega: Courier\nCarrito: https://shop.example.com/cart/shared?token=abc',
     );

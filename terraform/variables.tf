@@ -142,6 +142,13 @@ variable "public_api_token" {
   sensitive   = true
 }
 
+variable "checkout_service_token" {
+  description = "Bearer token used only by checkout to persist orders through the admin API."
+  type        = string
+  default     = "trini-checkout-service-token"
+  sensitive   = true
+}
+
 variable "admin_api_base_url" {
   description = "Base URL used by the checkout Lambda to call the admin API."
   type        = string

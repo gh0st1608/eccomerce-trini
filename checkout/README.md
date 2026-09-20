@@ -78,6 +78,7 @@ Todo el API de este servicio vive bajo el prefijo `/api/v1/checkout` (solo check
 el catalogo de productos/categorias y las tiendas administrables viven en `admin`).
 ecommerce ya no expone tiendas: valida el `storeId` de retiro consultando
 `GET /api/v1/admin/stores/pickup/:id` en `admin` (via `ADMIN_API_BASE_URL` + `PUBLIC_API_TOKEN`).
+Cada checkout generado se persiste como orden en `admin` usando `CHECKOUT_SERVICE_TOKEN`.
 
 - `POST /api/v1/checkout/whatsapp`
 - `GET /api/v1/checkout/share`

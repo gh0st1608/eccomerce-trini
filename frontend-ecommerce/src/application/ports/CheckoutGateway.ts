@@ -6,6 +6,7 @@ export interface CheckoutLinks {
   checkoutUrl: string
   sharedCartUrl?: string | null
   shortSharedCartUrl?: string | null
+  orderId?: string
 }
 
 export interface SharedCheckoutItem {

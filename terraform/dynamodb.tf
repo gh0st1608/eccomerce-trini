@@ -55,3 +55,14 @@ resource "aws_dynamodb_table" "internal_users" {
     type = "S"
   }
 }
+
+resource "aws_dynamodb_table" "orders" {
+  name         = "${local.name_prefix}-orders"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}

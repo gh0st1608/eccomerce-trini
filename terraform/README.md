@@ -16,19 +16,19 @@ Reproduce en AWS (o en LocalStack, en local) la arquitectura que ya corre en
                      /api/v1/admin/* │        │ /api/v1/checkout/*
                                      ▼        ▼
                          ┌──────────────┐  ┌──────────────┐
-                         │ admin Lambda │  │ ecommerce    │
+                         │ admin Lambda │  │ checkout     │
                          │ (S3 + Dynamo)│  │ Lambda       │
                          └─────┬───────┘  └────────────┘
                                 │
                     ┌──────────┴──────────┐
                     ▼                          ▼
-        S3 (product-images)         DynamoDB (products, categories,
-        ──▶ CloudFront (prod only)      stores, internal-users)
+      S3 (product-images)         DynamoDB (products, categories,
+      ──▶ CloudFront (prod only)      stores, orders, internal-users)
 ```
 
 Cada Lambda usa el mismo `src/lambda.js` (handler `serverless-http`) y las
-mismas variables de entorno que ya usan `ecommerce/.env` y `admin/.env`.
-`admin` persiste products/categories/stores/internal-users en DynamoDB (real
+mismas variables de entorno que ya usan `checkout/.env` y `admin/.env`.
+`admin` persiste products/categories/stores/orders/internal-users en DynamoDB (real
 fuente de verdad tanto en LocalStack como en AWS real; ya no hay dataset
 hardcodeado en produccion/staging). Usa `npm run seed:dynamodb` (ver
 `admin/scripts/seed-dynamodb.mjs`) para poblar las tablas la primera vez.
@@ -40,7 +40,7 @@ hardcodeado en produccion/staging). Usa `npm run seed:dynamodb` (ver
 | `versions.tf` / `providers.tf` | Version de Terraform y provider AWS (con endpoints redirigibles a LocalStack). |
 | `variables.tf` / `locals.tf` | Toda la config parametrizable (mismos nombres que las env vars de `ecommerce`/`admin`). |
 | `s3.tf` | Bucket de imagenes de producto y bucket del frontend estatico (privados). |
-| `dynamodb.tf` | Tablas de `admin` (products, categories, stores, internal-users), on-demand, fuente de verdad real (local y AWS). |
+| `dynamodb.tf` | Tablas de `admin` (products, categories, stores, orders, internal-users), on-demand, fuente de verdad real (local y AWS). |
 | `iam.tf` | Roles de ejecucion de cada Lambda + policies de S3 y DynamoDB para `admin`. |
 | `lambda.tf` | Las dos funciones Lambda (`ecommerce-api`, `admin-api`) + log groups. |
 | `apigateway.tf` | HTTP API con las mismas rutas que `gateway/nginx.conf` (`/api/v1/admin/*`, `/api/v1/checkout/*`). |
@@ -96,13 +96,18 @@ Deploy). Generalos con:
 
 1. Copia `terraform.tfvars.example` a `terraform.tfvars` (ignorado por git) y
    reemplaza los secretos (`jwt_secret`, `admin_auth_token`, `public_api_token`,
-   `lnkua_bearer_token`, `new_relic_license_key`, etc.) con valores reales,
+   `checkout_service_token`, `lnkua_bearer_token`, `new_relic_license_key`, etc.) con valores reales,
    idealmente inyectados desde variables de entorno `TF_VAR_*` en CI, no
    commiteados.
 2. Pon `use_localstack = false` y credenciales reales (`aws_access_key_id` /
    `aws_secret_access_key`, o usa el proveedor de credenciales por defecto de
    tu maquina/CI quitando esas dos variables).
 3. `terraform init && terraform apply -var-file=terraform.tfvars`.
+
+`checkout_service_token` debe ser un valor fuerte y compartido exclusivamente
+por los Lambdas `checkout` y `admin`. Antes del `apply`, reconstruye ambos ZIP;
+despues despliega el build del frontend e invalida CloudFront. Las ordenes que
+existian solo en `localStorage` no se migran automaticamente.
 
 ## Costo proyectado con Infracost (via Docker)
 

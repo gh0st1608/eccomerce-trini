@@ -15,6 +15,7 @@ admin_auth_username  = "admin"
 admin_auth_password  = "admin123"
 admin_auth_token     = "trini-admin-local-token"
 public_api_token     = "trini-public-readonly-token"
+checkout_service_token = "trini-checkout-service-token"
 admin_api_base_url   = "http://localhost:3001/api/v1/admin"
 whatsapp_phone       = "51900000000"
 

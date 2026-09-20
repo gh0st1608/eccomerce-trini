@@ -42,7 +42,7 @@ export class WhatsappLinkService extends WhatsappLinkServicePort {
       sharedCartUrl: options.sharedCartUrl ?? null,
       shortSharedCartUrl,
       subtotal,
-      itemCount: cart.items.length,
+      itemCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
     };
   }
 }

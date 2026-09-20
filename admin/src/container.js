@@ -5,11 +5,13 @@ import { InMemoryStoreRepository } from './infrastructure/repositories/InMemoryS
 import { InMemoryProductRepository } from './infrastructure/repositories/InMemoryProductRepository.js';
 import { InMemoryCategoryRepository } from './infrastructure/repositories/InMemoryCategoryRepository.js';
 import { InMemoryStorefrontSettingsRepository } from './infrastructure/repositories/InMemoryStorefrontSettingsRepository.js';
+import { InMemoryOrderRepository } from './infrastructure/repositories/InMemoryOrderRepository.js';
 import { DynamoDbInternalUserRepository } from './infrastructure/repositories/DynamoDbInternalUserRepository.js';
 import { DynamoDbStoreRepository } from './infrastructure/repositories/DynamoDbStoreRepository.js';
 import { DynamoDbProductRepository } from './infrastructure/repositories/DynamoDbProductRepository.js';
 import { DynamoDbCategoryRepository } from './infrastructure/repositories/DynamoDbCategoryRepository.js';
 import { DynamoDbStorefrontSettingsRepository } from './infrastructure/repositories/DynamoDbStorefrontSettingsRepository.js';
+import { DynamoDbOrderRepository } from './infrastructure/repositories/DynamoDbOrderRepository.js';
 import { createDynamoDbDocumentClient } from './infrastructure/clients/DynamoDbClientFactory.js';
 import { S3ProductImageStorageClient } from './infrastructure/clients/S3ProductImageStorageClient.js';
 import { ListProductsUseCase } from './application/usecases/ListProductsUseCase.js';
@@ -32,6 +34,10 @@ import { CreateStoreUseCase } from './application/usecases/CreateStoreUseCase.js
 import { UpdateStoreUseCase } from './application/usecases/UpdateStoreUseCase.js';
 import { ListPickupStoresUseCase } from './application/usecases/ListPickupStoresUseCase.js';
 import { GetPickupStoreByIdUseCase } from './application/usecases/GetPickupStoreByIdUseCase.js';
+import { ListOrdersUseCase } from './application/usecases/ListOrdersUseCase.js';
+import { CreateOrderUseCase } from './application/usecases/CreateOrderUseCase.js';
+import { UpdateOrderUseCase } from './application/usecases/UpdateOrderUseCase.js';
+import { DeleteOrderUseCase } from './application/usecases/DeleteOrderUseCase.js';
 import { createProductController } from './infrastructure/controllers/product.controller.js';
 import { createInternalUserController } from './infrastructure/controllers/internal-user.controller.js';
 import { createCategoryController } from './infrastructure/controllers/category.controller.js';
@@ -39,6 +45,7 @@ import { createStorefrontSettingsController } from './infrastructure/controllers
 import { createStoreController } from './infrastructure/controllers/store.controller.js';
 import { createPublicStoreController } from './infrastructure/controllers/public-store.controller.js';
 import { createAuthController } from './infrastructure/controllers/auth.controller.js';
+import { createOrderController } from './infrastructure/controllers/order.controller.js';
 
 export const createContainer = ({ overrides = {} } = {}) => {
   const logger = createLogger({
@@ -92,6 +99,14 @@ export const createContainer = ({ overrides = {} } = {}) => {
           tableName: env.dynamoDbTableStores,
         })
       : new InMemoryStoreRepository());
+  const orderRepository =
+    overrides.orderRepository
+    ?? (env.persistenceDriver === 'dynamodb'
+      ? new DynamoDbOrderRepository({
+          documentClient: dynamoDbDocumentClient,
+          tableName: env.dynamoDbTableOrders,
+        })
+      : new InMemoryOrderRepository());
   const productImageStorage =
     overrides.productImageStorage
     ?? (env.productImageStorageEnabled
@@ -141,6 +156,10 @@ export const createContainer = ({ overrides = {} } = {}) => {
   const updateStoreUseCase = new UpdateStoreUseCase({ storeRepository });
   const listPickupStoresUseCase = new ListPickupStoresUseCase({ storeRepository });
   const getPickupStoreByIdUseCase = new GetPickupStoreByIdUseCase({ storeRepository });
+  const listOrdersUseCase = new ListOrdersUseCase({ orderRepository });
+  const createOrderUseCase = new CreateOrderUseCase({ orderRepository });
+  const updateOrderUseCase = new UpdateOrderUseCase({ orderRepository });
+  const deleteOrderUseCase = new DeleteOrderUseCase({ orderRepository });
 
   return {
     logger,
@@ -178,6 +197,12 @@ export const createContainer = ({ overrides = {} } = {}) => {
         getPickupStoreByIdUseCase,
       }),
       authController: createAuthController(),
+      orderController: createOrderController({
+        listOrdersUseCase,
+        createOrderUseCase,
+        updateOrderUseCase,
+        deleteOrderUseCase,
+      }),
     },
   };
 };

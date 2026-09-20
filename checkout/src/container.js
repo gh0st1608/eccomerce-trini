@@ -4,11 +4,17 @@ import { HttpAdminProductRepository } from './infrastructure/repositories/HttpAd
 import { HttpAdminStoreRepository } from './infrastructure/repositories/HttpAdminStoreRepository.js';
 import { WhatsappClient } from './infrastructure/clients/WhatsappClient.js';
 import { LnkUaUrlShortenerClient } from './infrastructure/clients/LnkUaUrlShortenerClient.js';
+import { HttpAdminOrderClient } from './infrastructure/clients/HttpAdminOrderClient.js';
 import { WhatsappLinkService } from './domain/services/WhatsappLinkService.js';
 import { CheckoutShareLinkService } from './domain/services/CheckoutShareLinkService.js';
 import { BuildWhatsappCheckoutUseCase } from './application/usecases/BuildWhatsappCheckoutUseCase.js';
 import { ResolveSharedCheckoutUseCase } from './application/usecases/ResolveSharedCheckoutUseCase.js';
 import { createCheckoutController } from './infrastructure/controllers/checkout.controller.js';
+
+const createOrderClient = (overrides) => overrides.orderClient ?? new HttpAdminOrderClient({
+  baseUrl: env.adminApiBaseUrl,
+  token: env.checkoutServiceToken,
+});
 
 export const createContainer = ({ overrides = {} } = {}) => {
   const logger = createLogger({
@@ -23,6 +29,7 @@ export const createContainer = ({ overrides = {} } = {}) => {
   const storeRepository =
     overrides.storeRepository
     ?? new HttpAdminStoreRepository({ baseUrl: env.adminApiBaseUrl, token: env.publicApiToken });
+  const orderClient = createOrderClient(overrides);
   const whatsappClient = new WhatsappClient({ whatsappPhone: env.whatsappPhone });
   const urlShortenerClient = new LnkUaUrlShortenerClient({
     baseUrl: env.lnkUaApiBaseUrl,
@@ -44,6 +51,7 @@ export const createContainer = ({ overrides = {} } = {}) => {
     storeRepository,
     whatsappLinkService,
     checkoutShareLinkService,
+    orderClient,
   });
   const resolveSharedCheckoutUseCase = new ResolveSharedCheckoutUseCase({
     checkoutShareLinkService,

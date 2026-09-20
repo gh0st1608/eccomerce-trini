@@ -77,6 +77,7 @@ export const env = {
   lnkUaRequestTimeoutMs: Number(process.env.LNKUA_REQUEST_TIMEOUT_MS ?? 3500),
   adminApiBaseUrl: process.env.ADMIN_API_BASE_URL ?? 'http://localhost:3001/api/v1/admin',
   publicApiToken: process.env.PUBLIC_API_TOKEN ?? 'trini-public-readonly-token',
+  checkoutServiceToken: process.env.CHECKOUT_SERVICE_TOKEN ?? 'trini-checkout-service-token',
   enableSwagger: process.env.ENABLE_SWAGGER === 'true',
   enableMetrics: process.env.ENABLE_METRICS === 'true',
   enableTracing: process.env.ENABLE_TRACING === 'true',

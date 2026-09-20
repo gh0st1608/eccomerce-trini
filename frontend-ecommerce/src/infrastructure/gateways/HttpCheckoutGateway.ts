@@ -33,6 +33,7 @@ export class HttpCheckoutGateway implements CheckoutGateway {
         checkoutUrl: parsed.checkoutUrl,
         sharedCartUrl: parsed.sharedCartUrl,
         shortSharedCartUrl: parsed.shortSharedCartUrl,
+        orderId: parsed.orderId,
       }
     }
 
@@ -40,6 +41,7 @@ export class HttpCheckoutGateway implements CheckoutGateway {
       checkoutUrl: parsed.data.checkoutUrl,
       sharedCartUrl: parsed.data.sharedCartUrl,
       shortSharedCartUrl: parsed.data.shortSharedCartUrl,
+      orderId: parsed.data.orderId,
     }
   }
 

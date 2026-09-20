@@ -35,18 +35,14 @@ import { CreateAdminCategoryUseCase } from '@application/use-cases/CreateAdminCa
 import { UpdateAdminCategoryUseCase } from '@application/use-cases/UpdateAdminCategoryUseCase'
 import { DeleteAdminCategoryUseCase } from '@application/use-cases/DeleteAdminCategoryUseCase'
 import { ListAdminOrdersUseCase } from '@application/use-cases/ListAdminOrdersUseCase'
+import { UpdateAdminOrderUseCase } from '@application/use-cases/UpdateAdminOrderUseCase'
+import { DeleteAdminOrderUseCase } from '@application/use-cases/DeleteAdminOrderUseCase'
 import { ListAdminStoresUseCase } from '@application/use-cases/ListAdminStoresUseCase'
 import { CreateAdminStoreUseCase } from '@application/use-cases/CreateAdminStoreUseCase'
 import { UpdateAdminStoreUseCase } from '@application/use-cases/UpdateAdminStoreUseCase'
 import { GetStorefrontSettingsUseCase } from '@application/use-cases/GetStorefrontSettingsUseCase'
 import { UpdateStorefrontSettingsUseCase } from '@application/use-cases/UpdateStorefrontSettingsUseCase'
 import { clearAdminAuthToken } from '@shared/utils/adminAuth'
-import {
-  setLocalCheckoutOrderPaymentStatus,
-  setLocalCheckoutOrderStatus,
-  setOrderPaymentStatusOverride,
-  setOrderStatusOverride,
-} from '@shared/utils/adminOrderHistory'
 import { BrandLogo } from '@presentation/components/BrandLogo'
 import { formatCurrency } from '@shared/utils/currency'
 import { normalizeSlug } from '@shared/utils/slug'
@@ -68,6 +64,63 @@ type StoreEditorMode = 'create' | 'update'
 type ProductStatusFilter = 'active' | 'inactive' | 'all'
 type OrderStatusFilter = 'active' | 'inactive' | 'all'
 type EntityStatusFilter = 'active' | 'inactive' | 'all'
+
+const ADMIN_LIST_PAGE_SIZE = 10
+
+interface ListPaginationProps {
+  currentPage: number
+  totalItems: number
+  itemLabel: string
+  onPageChange: (page: number) => void
+}
+
+function ListPagination({
+  currentPage,
+  totalItems,
+  itemLabel,
+  onPageChange,
+}: ListPaginationProps) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / ADMIN_LIST_PAGE_SIZE))
+  const firstVisibleItem = totalItems === 0 ? 0 : (currentPage - 1) * ADMIN_LIST_PAGE_SIZE + 1
+  const lastVisibleItem = Math.min(currentPage * ADMIN_LIST_PAGE_SIZE, totalItems)
+
+  return (
+    <Flex
+      justify="space-between"
+      align={{ base: 'stretch', sm: 'center' }}
+      direction={{ base: 'column', sm: 'row' }}
+      gap={3}
+      mt={4}
+    >
+      <Text fontSize="sm" color="#475569">
+        Mostrando {firstVisibleItem}-{lastVisibleItem} de {totalItems} {itemLabel}
+      </Text>
+      <HStack justify={{ base: 'space-between', sm: 'end' }}>
+        <Button
+          size="sm"
+          variant="outline"
+          borderColor="#cbd5e1"
+          disabled={currentPage === 1}
+          onClick={() => onPageChange(currentPage - 1)}
+        >
+          Anterior
+        </Button>
+        <Text minW="92px" textAlign="center" fontSize="sm" color="#334155">
+          Pagina {currentPage} de {totalPages}
+        </Text>
+        <Button
+          size="sm"
+          variant="outline"
+          borderColor="#cbd5e1"
+          disabled={currentPage === totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+        >
+          Siguiente
+        </Button>
+      </HStack>
+    </Flex>
+  )
+}
 
 const defaultProductForm: CreateAdminProductInput = {
   name: '',
@@ -664,9 +717,13 @@ export function AdminDashboardPage() {
   const [orderDetail, setOrderDetail] = useState<AdminOrder | null>(null)
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('active')
   const [orderReferenceFilter, setOrderReferenceFilter] = useState('')
+  const [orderPage, setOrderPage] = useState(1)
   const [productStatusFilter, setProductStatusFilter] = useState<ProductStatusFilter>('active')
+  const [productReferenceFilter, setProductReferenceFilter] = useState('')
+  const [productPage, setProductPage] = useState(1)
   const [categoryStatusFilter, setCategoryStatusFilter] = useState<EntityStatusFilter>('active')
   const [categoryReferenceFilter, setCategoryReferenceFilter] = useState('')
+  const [categoryPage, setCategoryPage] = useState(1)
   const [storeStatusFilter, setStoreStatusFilter] = useState<EntityStatusFilter>('active')
   const [storeReferenceFilter, setStoreReferenceFilter] = useState('')
   const [productOptions, setProductOptions] = useState<AdminProductOptions>({
@@ -734,6 +791,8 @@ export function AdminDashboardPage() {
   const updateAdminStoreUseCase = useMemo(() => new UpdateAdminStoreUseCase(storeRepository), [storeRepository])
 
   const listAdminOrdersUseCase = useMemo(() => new ListAdminOrdersUseCase(orderRepository), [orderRepository])
+  const updateAdminOrderUseCase = useMemo(() => new UpdateAdminOrderUseCase(orderRepository), [orderRepository])
+  const deleteAdminOrderUseCase = useMemo(() => new DeleteAdminOrderUseCase(orderRepository), [orderRepository])
   const getStorefrontSettingsUseCase = useMemo(
     () => new GetStorefrontSettingsUseCase(storefrontSettingsRepository),
     [storefrontSettingsRepository],
@@ -752,12 +811,31 @@ export function AdminDashboardPage() {
     [products],
   )
   const filteredProducts = useMemo(() => {
-    if (productStatusFilter === 'all') {
-      return products
+    const normalizedFilter = productReferenceFilter.trim().toLowerCase()
+    const byStatus =
+      productStatusFilter === 'all'
+        ? products
+        : products.filter((product) => product.status === productStatusFilter)
+
+    if (!normalizedFilter) {
+      return byStatus
     }
 
-    return products.filter((product) => product.status === productStatusFilter)
-  }, [productStatusFilter, products])
+    return byStatus.filter((product) =>
+      [product.name, product.description].some((value) =>
+        value.toLowerCase().includes(normalizedFilter),
+      ),
+    )
+  }, [productReferenceFilter, productStatusFilter, products])
+  const productPageCount = Math.max(1, Math.ceil(filteredProducts.length / ADMIN_LIST_PAGE_SIZE))
+  const currentProductPage = Math.min(productPage, productPageCount)
+  const paginatedProducts = useMemo(
+    () => filteredProducts.slice(
+      (currentProductPage - 1) * ADMIN_LIST_PAGE_SIZE,
+      currentProductPage * ADMIN_LIST_PAGE_SIZE,
+    ),
+    [currentProductPage, filteredProducts],
+  )
   const activeCategoriesCount = useMemo(
     () => categories.filter((category) => category.active).length,
     [categories],
@@ -783,6 +861,15 @@ export function AdminDashboardPage() {
       ),
     )
   }, [categories, categoryReferenceFilter, categoryStatusFilter])
+  const categoryPageCount = Math.max(1, Math.ceil(filteredCategories.length / ADMIN_LIST_PAGE_SIZE))
+  const currentCategoryPage = Math.min(categoryPage, categoryPageCount)
+  const paginatedCategories = useMemo(
+    () => filteredCategories.slice(
+      (currentCategoryPage - 1) * ADMIN_LIST_PAGE_SIZE,
+      currentCategoryPage * ADMIN_LIST_PAGE_SIZE,
+    ),
+    [currentCategoryPage, filteredCategories],
+  )
   const activeStoresCount = useMemo(
     () => stores.filter((store) => store.active).length,
     [stores],
@@ -839,21 +926,36 @@ export function AdminDashboardPage() {
       )
     })
   }, [orderReferenceFilter, orderStatusFilter, orders])
+  const orderPageCount = Math.max(1, Math.ceil(filteredOrders.length / ADMIN_LIST_PAGE_SIZE))
+  const currentOrderPage = Math.min(orderPage, orderPageCount)
+  const paginatedOrders = useMemo(
+    () => filteredOrders.slice(
+      (currentOrderPage - 1) * ADMIN_LIST_PAGE_SIZE,
+      currentOrderPage * ADMIN_LIST_PAGE_SIZE,
+    ),
+    [currentOrderPage, filteredOrders],
+  )
 
-  function handleOrderPaymentStatusChange(orderId: string, paymentStatus: 'pending' | 'paid') {
+  async function handleOrderPaymentStatusChange(
+    orderId: string,
+    paymentStatus: 'pending' | 'paid',
+  ) {
     const order = orders.find((entry) => entry.id === orderId)
     if (!order) {
       return
     }
 
-    if (order.source === 'local-checkout-history') {
-      setLocalCheckoutOrderPaymentStatus(orderId, paymentStatus)
-    } else {
-      setOrderPaymentStatusOverride(orderId, paymentStatus)
+    try {
+      const updated = await updateAdminOrderUseCase.execute(orderId, { paymentStatus })
+      setOrders((prev) => prev.map((entry) => (entry.id === orderId ? updated : entry)))
+      setOrderDetail((prev) => (prev?.id === orderId ? updated : prev))
+    } catch (error) {
+      if (isUnauthorizedError(error)) {
+        forceLogin()
+        return
+      }
+      openFeedback('error', 'No se pudo actualizar', 'No fue posible cambiar el estado de pago.')
     }
-
-    setOrders((prev) => prev.map((entry) => (entry.id === orderId ? { ...entry, paymentStatus } : entry)))
-    setOrderDetail((prev) => (prev?.id === orderId ? { ...prev, paymentStatus } : prev))
   }
 
   const productSectionHealth = useMemo(() => {
@@ -1386,23 +1488,17 @@ export function AdminDashboardPage() {
           return
         }
 
-        if (order.source === 'local-checkout-history') {
-          setLocalCheckoutOrderStatus(order.id, 'inactive')
+        if (order.status === 'active') {
+          const updated = await updateAdminOrderUseCase.execute(order.id, { status: 'inactive' })
+          setOrders((prev) => prev.map((entry) => (entry.id === order.id ? updated : entry)))
+          setOrderDetail((prev) => (prev?.id === order.id ? updated : prev))
+          openFeedback('success', 'Orden inactivada', 'La orden fue marcada como inactiva.')
         } else {
-          setOrderStatusOverride(order.id, 'inactive')
+          await deleteAdminOrderUseCase.execute(order.id)
+          setOrders((prev) => prev.filter((entry) => entry.id !== order.id))
+          setOrderDetail((prev) => (prev?.id === order.id ? null : prev))
+          openFeedback('success', 'Orden eliminada', 'La orden fue eliminada definitivamente.')
         }
-
-        setOrders((prev) => prev.map((entry) => (entry.id === order.id ? { ...entry, status: 'inactive' } : entry)))
-        setOrderDetail((prev) =>
-          prev?.id === order.id
-            ? {
-              ...prev,
-              status: 'inactive',
-            }
-            : prev,
-        )
-
-        openFeedback('success', 'Orden inactivada', 'La orden fue marcada como inactiva.')
       }
     } catch (error) {
       if (isUnauthorizedError(error)) {
@@ -1604,7 +1700,10 @@ export function AdminDashboardPage() {
                 bg={productStatusFilter === 'active' ? '#0f766e' : 'white'}
                 color={productStatusFilter === 'active' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setProductStatusFilter('active')}
+                onClick={() => {
+                  setProductStatusFilter('active')
+                  setProductPage(1)
+                }}
               >
                 Activos: {activeProductsCount}
               </Button>
@@ -1614,7 +1713,10 @@ export function AdminDashboardPage() {
                 bg={productStatusFilter === 'inactive' ? '#475569' : 'white'}
                 color={productStatusFilter === 'inactive' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setProductStatusFilter('inactive')}
+                onClick={() => {
+                  setProductStatusFilter('inactive')
+                  setProductPage(1)
+                }}
               >
                 Inactivos: {inactiveProductsCount}
               </Button>
@@ -1624,15 +1726,29 @@ export function AdminDashboardPage() {
                 bg={productStatusFilter === 'all' ? '#1e293b' : 'white'}
                 color={productStatusFilter === 'all' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setProductStatusFilter('all')}
+                onClick={() => {
+                  setProductStatusFilter('all')
+                  setProductPage(1)
+                }}
               >
                 Todos: {products.length}
               </Button>
             </HStack>
           </VStack>
-          <Button bg="#0f766e" color="white" _hover={{ bg: '#115e59' }} onClick={openCreateProductModal}>
-            Agregar producto
-          </Button>
+          <VStack align={{ base: 'stretch', md: 'end' }} gap={2} width={{ base: '100%', md: '420px' }}>
+            <Input
+              value={productReferenceFilter}
+              onChange={(event) => {
+                setProductReferenceFilter(event.target.value)
+                setProductPage(1)
+              }}
+              placeholder="Filtrar por nombre o descripción"
+              bg="white"
+            />
+            <Button bg="#0f766e" color="white" _hover={{ bg: '#115e59' }} onClick={openCreateProductModal}>
+              Agregar producto
+            </Button>
+          </VStack>
         </Flex>
 
         <Box overflowX="auto">
@@ -1669,7 +1785,7 @@ export function AdminDashboardPage() {
               </Box>
             </Box>
             <Box as="tbody">
-              {filteredProducts.map((product) => (
+              {paginatedProducts.map((product) => (
                 <Box as="tr" key={product.id} borderTop="1px solid" borderColor="#e2e8f0">
                   <Box as="td" p={3}>
                     <VStack align="start" gap={0}>
@@ -1732,6 +1848,12 @@ export function AdminDashboardPage() {
             </Box>
           </Box>
         </Box>
+        <ListPagination
+          currentPage={currentProductPage}
+          totalItems={filteredProducts.length}
+          itemLabel="productos"
+          onPageChange={setProductPage}
+        />
       </Box>
     )
   }
@@ -1751,7 +1873,10 @@ export function AdminDashboardPage() {
                 bg={categoryStatusFilter === 'active' ? '#0f766e' : 'white'}
                 color={categoryStatusFilter === 'active' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setCategoryStatusFilter('active')}
+                onClick={() => {
+                  setCategoryStatusFilter('active')
+                  setCategoryPage(1)
+                }}
               >
                 Activas: {activeCategoriesCount}
               </Button>
@@ -1761,7 +1886,10 @@ export function AdminDashboardPage() {
                 bg={categoryStatusFilter === 'inactive' ? '#475569' : 'white'}
                 color={categoryStatusFilter === 'inactive' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setCategoryStatusFilter('inactive')}
+                onClick={() => {
+                  setCategoryStatusFilter('inactive')
+                  setCategoryPage(1)
+                }}
               >
                 Inactivas: {inactiveCategoriesCount}
               </Button>
@@ -1771,7 +1899,10 @@ export function AdminDashboardPage() {
                 bg={categoryStatusFilter === 'all' ? '#1e293b' : 'white'}
                 color={categoryStatusFilter === 'all' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setCategoryStatusFilter('all')}
+                onClick={() => {
+                  setCategoryStatusFilter('all')
+                  setCategoryPage(1)
+                }}
               >
                 Todas: {categories.length}
               </Button>
@@ -1780,7 +1911,10 @@ export function AdminDashboardPage() {
           <VStack align={{ base: 'stretch', md: 'end' }} gap={2} width={{ base: '100%', md: '420px' }}>
             <Input
               value={categoryReferenceFilter}
-              onChange={(event) => setCategoryReferenceFilter(event.target.value)}
+              onChange={(event) => {
+                setCategoryReferenceFilter(event.target.value)
+                setCategoryPage(1)
+              }}
               placeholder="Filtrar por nombre, slug o descripción"
               bg="white"
             />
@@ -1820,7 +1954,7 @@ export function AdminDashboardPage() {
               </Box>
             </Box>
             <Box as="tbody">
-              {filteredCategories.map((category) => (
+              {paginatedCategories.map((category) => (
                 <Box as="tr" key={category.id} borderTop="1px solid" borderColor="#e2e8f0">
                   <Box as="td" p={3}>
                     {category.name}
@@ -1884,6 +2018,12 @@ export function AdminDashboardPage() {
             </Box>
           </Box>
         </Box>
+        <ListPagination
+          currentPage={currentCategoryPage}
+          totalItems={filteredCategories.length}
+          itemLabel="categorias"
+          onPageChange={setCategoryPage}
+        />
       </Box>
     )
   }
@@ -1903,7 +2043,10 @@ export function AdminDashboardPage() {
                 bg={orderStatusFilter === 'active' ? '#0f766e' : 'white'}
                 color={orderStatusFilter === 'active' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setOrderStatusFilter('active')}
+                onClick={() => {
+                  setOrderStatusFilter('active')
+                  setOrderPage(1)
+                }}
               >
                 Activas: {activeOrdersCount}
               </Button>
@@ -1913,7 +2056,10 @@ export function AdminDashboardPage() {
                 bg={orderStatusFilter === 'inactive' ? '#475569' : 'white'}
                 color={orderStatusFilter === 'inactive' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setOrderStatusFilter('inactive')}
+                onClick={() => {
+                  setOrderStatusFilter('inactive')
+                  setOrderPage(1)
+                }}
               >
                 Inactivas: {inactiveOrdersCount}
               </Button>
@@ -1923,7 +2069,10 @@ export function AdminDashboardPage() {
                 bg={orderStatusFilter === 'all' ? '#1e293b' : 'white'}
                 color={orderStatusFilter === 'all' ? 'white' : '#334155'}
                 borderColor="#94a3b8"
-                onClick={() => setOrderStatusFilter('all')}
+                onClick={() => {
+                  setOrderStatusFilter('all')
+                  setOrderPage(1)
+                }}
               >
                 Todas: {orders.length}
               </Button>
@@ -1932,7 +2081,10 @@ export function AdminDashboardPage() {
           <VStack align={{ base: 'stretch', md: 'end' }} gap={2} width={{ base: '100%', md: '420px' }}>
             <Input
               value={orderReferenceFilter}
-              onChange={(event) => setOrderReferenceFilter(event.target.value)}
+              onChange={(event) => {
+                setOrderReferenceFilter(event.target.value)
+                setOrderPage(1)
+              }}
               placeholder="Filtrar por celular, nombre o apellido"
               bg="white"
             />
@@ -1976,7 +2128,7 @@ export function AdminDashboardPage() {
               </Box>
             </Box>
             <Box as="tbody">
-              {filteredOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <Box as="tr" key={order.id} borderTop="1px solid" borderColor="#e2e8f0">
                   <Box as="td" p={3}>
                     {order.id.slice(0, 8)}
@@ -1991,9 +2143,7 @@ export function AdminDashboardPage() {
                     {formatCurrency(order.subtotal)}
                   </Box>
                   <Box as="td" p={3}>
-                    <Badge colorPalette={order.source === 'api' ? 'teal' : 'orange'}>
-                      {order.source === 'api' ? 'API ecommerce' : 'Historial local'}
-                    </Badge>
+                    <Badge colorPalette="teal">API ecommerce</Badge>
                   </Box>
                   <Box as="td" p={3}>
                     <VStack align="start" gap={0}>
@@ -2012,7 +2162,7 @@ export function AdminDashboardPage() {
                     <select
                       value={order.paymentStatus}
                       onChange={(event) =>
-                        handleOrderPaymentStatusChange(
+                        void handleOrderPaymentStatusChange(
                           order.id,
                           event.target.value === 'paid' ? 'paid' : 'pending',
                         )
@@ -2040,10 +2190,9 @@ export function AdminDashboardPage() {
                         bg="#b91c1c"
                         color="white"
                         _hover={{ bg: '#991b1b' }}
-                        disabled={order.status === 'inactive'}
                         onClick={() => setConfirmDelete({ isOpen: true, entity: 'order', id: order.id })}
                       >
-                        Eliminar
+                        {order.status === 'active' ? 'Inactivar' : 'Eliminar'}
                       </Button>
                     </HStack>
                   </Box>
@@ -2052,6 +2201,12 @@ export function AdminDashboardPage() {
             </Box>
           </Box>
         </Box>
+        <ListPagination
+          currentPage={currentOrderPage}
+          totalItems={filteredOrders.length}
+          itemLabel="ordenes"
+          onPageChange={setOrderPage}
+        />
       </Box>
     )
   }
@@ -3576,7 +3731,9 @@ export function AdminDashboardPage() {
                   : 'Vas a eliminar definitivamente esta categoria inactiva.'
                 : confirmDelete?.entity === 'store'
                   ? 'Vas a eliminar esta tienda (se desactivara).'
-                  : 'Vas a eliminar esta orden del listado.' }
+                  : orders.find((order) => order.id === confirmDelete?.id)?.status === 'active'
+                    ? 'La orden se marcara como inactiva.'
+                    : 'La orden se eliminara definitivamente.' }
           </Text>
           <HStack>
             <Button bg="#b91c1c" color="white" _hover={{ bg: '#991b1b' }} loading={isSubmitting} onClick={() => void handleDelete()}>

@@ -22,6 +22,6 @@ export interface AdminOrder {
   referenceLastName: string
   itemCount: number
   subtotal: number
-  source: 'api' | 'local-checkout-history'
+  source: 'api'
   items: AdminOrderItem[]
 }
