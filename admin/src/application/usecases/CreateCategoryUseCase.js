@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { BusinessError } from '../../domain/exceptions/index.js';
 import { prepareCategoryImageForStorage } from '../services/prepareCategoryImageForStorage.js';
+import { createCategorySlug } from '../../shared/utils/category-slug.js';
 
 const SLUG_PATTERN = /^[a-z0-9ñ]+(?:-[a-z0-9ñ]+)*$/;
 
@@ -10,24 +12,28 @@ export class CreateCategoryUseCase {
   }
 
   async execute(payload) {
-    if (!SLUG_PATTERN.test(payload.slug)) {
+    const categoryId = randomUUID();
+    const normalizedPayload = { ...payload, id: categoryId, slug: createCategorySlug(payload.name) };
+
+    if (!SLUG_PATTERN.test(normalizedPayload.slug)) {
       throw new BusinessError('Invalid category slug format');
     }
 
-    const existing = await this.categoryRepository.findBySlug(payload.slug);
+    const existing = await this.categoryRepository.findBySlug(normalizedPayload.slug);
     if (existing) {
       throw new BusinessError('Category slug already exists');
     }
 
-    if (payload.parentId) {
-      const parent = await this.categoryRepository.findById(payload.parentId);
+    if (normalizedPayload.parentId) {
+      const parent = await this.categoryRepository.findById(normalizedPayload.parentId);
       if (!parent || parent.parentId) {
         throw new BusinessError('Parent category must be an existing general category');
       }
     }
 
     const preparedPayload = await prepareCategoryImageForStorage({
-      payload,
+      payload: normalizedPayload,
+      categoryId,
       productImageStorage: this.productImageStorage,
     });
     return this.categoryRepository.create(preparedPayload);

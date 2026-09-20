@@ -47,6 +47,10 @@ export class FetchHttpClient implements HttpClient {
     })
   }
 
+  async delete<T>(path: string): Promise<T> {
+    return await this.request<T>(path, { method: 'DELETE' })
+  }
+
   private async request<T>(path: string, init: RequestInit): Promise<T> {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`
     const controller = new AbortController()

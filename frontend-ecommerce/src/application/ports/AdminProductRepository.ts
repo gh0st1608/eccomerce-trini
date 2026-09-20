@@ -10,4 +10,5 @@ export interface AdminProductRepository {
   getOptions(): Promise<AdminProductOptions>
   create(payload: CreateAdminProductInput): Promise<AdminProduct>
   update(payload: UpdateAdminProductInput): Promise<AdminProduct>
+  delete(id: string): Promise<void>
 }

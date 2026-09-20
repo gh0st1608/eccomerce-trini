@@ -95,10 +95,11 @@ export function CartPage() {
   )
 
   const hasGiftItems = cartItemsList.some((item) => item.isGift)
+  const effectiveDeliveryMethod = hasGiftItems ? 'pickup' : deliveryMethod
 
   const isDeliverySelectionValid =
-    (!hasGiftItems && deliveryMethod === 'courier') ||
-    (deliveryMethod === 'pickup' && selectedPickupStoreId.length > 0)
+    effectiveDeliveryMethod === 'courier' ||
+    (effectiveDeliveryMethod === 'pickup' && selectedPickupStoreId.length > 0)
 
   const isCustomerInfoValid =
     isValidCustomerPhone(customerPhone) &&
@@ -107,8 +108,8 @@ export function CartPage() {
     isValidCustomerName(referenceMaternalLastName)
 
   const missingCheckoutFields = [
-    deliveryMethod === null ? 'Modalidad de entrega' : null,
-    deliveryMethod === 'pickup' && selectedPickupStoreId.length === 0
+    effectiveDeliveryMethod === null ? 'Modalidad de entrega' : null,
+    effectiveDeliveryMethod === 'pickup' && selectedPickupStoreId.length === 0
       ? 'Tienda para retiro'
       : null,
     !isValidCustomerPhone(customerPhone) ? 'Celular de contacto (6 a 9 digitos)' : null,
@@ -120,12 +121,6 @@ export function CartPage() {
   const isCheckoutDisabled =
     cartItemsList.length === 0 ||
     isCheckoutLoading
-
-  useEffect(() => {
-    if (hasGiftItems) {
-      setDeliveryMethod('pickup')
-    }
-  }, [hasGiftItems])
 
   async function handleCheckout() {
     if (!isDeliverySelectionValid || !isCustomerInfoValid) {
@@ -154,7 +149,7 @@ export function CartPage() {
 
       const checkoutLinks = await generateCheckoutUrlUseCase.execute(
         checkoutItems,
-        deliveryMethod === 'pickup'
+        effectiveDeliveryMethod === 'pickup'
           ? { method: 'pickup', storeId: selectedPickupStoreId }
           : { method: 'courier' },
         checkoutCustomer,
@@ -541,11 +536,11 @@ export function CartPage() {
                         <Button
                           flex="1"
                           size="sm"
-                          variant={deliveryMethod === 'pickup' ? 'solid' : 'outline'}
-                          bg={deliveryMethod === 'pickup' ? '#8f285e' : 'white'}
-                          color={deliveryMethod === 'pickup' ? 'white' : '#513766'}
+                          variant={effectiveDeliveryMethod === 'pickup' ? 'solid' : 'outline'}
+                          bg={effectiveDeliveryMethod === 'pickup' ? '#8f285e' : 'white'}
+                          color={effectiveDeliveryMethod === 'pickup' ? 'white' : '#513766'}
                           borderColor="#8f285e"
-                          _hover={{ bg: deliveryMethod === 'pickup' ? '#731f4b' : '#fff0f5' }}
+                          _hover={{ bg: effectiveDeliveryMethod === 'pickup' ? '#731f4b' : '#fff0f5' }}
                           onClick={() => setDeliveryMethod('pickup')}
                         >
                           Retiro en tienda
@@ -553,11 +548,11 @@ export function CartPage() {
                         <Button
                           flex="1"
                           size="sm"
-                          variant={deliveryMethod === 'courier' ? 'solid' : 'outline'}
-                          bg={deliveryMethod === 'courier' ? '#8f285e' : 'white'}
-                          color={deliveryMethod === 'courier' ? 'white' : '#513766'}
+                          variant={effectiveDeliveryMethod === 'courier' ? 'solid' : 'outline'}
+                          bg={effectiveDeliveryMethod === 'courier' ? '#8f285e' : 'white'}
+                          color={effectiveDeliveryMethod === 'courier' ? 'white' : '#513766'}
                           borderColor="#8f285e"
-                          _hover={{ bg: deliveryMethod === 'courier' ? '#731f4b' : '#fff0f5' }}
+                          _hover={{ bg: effectiveDeliveryMethod === 'courier' ? '#731f4b' : '#fff0f5' }}
                           disabled={hasGiftItems}
                           onClick={() => {
                             setDeliveryMethod('courier')
@@ -568,7 +563,7 @@ export function CartPage() {
                         </Button>
                       </HStack>
 
-                      {deliveryMethod === 'pickup' ? (
+                      {effectiveDeliveryMethod === 'pickup' ? (
                         <VStack align="stretch" gap={2}>
                           <Text color="#334155" fontSize="sm" fontWeight="medium">
                             Tienda para retiro

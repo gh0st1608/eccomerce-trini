@@ -87,4 +87,8 @@ export class HttpAdminCategoryRepository implements AdminCategoryRepository {
 
     return mapSingleCategoryResponse(response)
   }
+
+  async delete(id: string): Promise<void> {
+    await this.httpClient.delete(`/categories/${id}`)
+  }
 }

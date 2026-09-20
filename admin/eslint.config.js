@@ -11,6 +11,8 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: {
+        Buffer: 'readonly',
+        URL: 'readonly',
         process: 'readonly',
       },
     },
@@ -24,9 +26,32 @@ export default [
     },
   },
   {
+    files: ['src/app.js', 'src/container.js'],
+    rules: {
+      'max-lines-per-function': ['error', 180],
+      complexity: ['error', 20],
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
+      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+      complexity: ['error', 20],
+    },
+  },
+  {
     files: ['src/tests/**/*.js'],
     languageOptions: {
       globals: {
+        afterEach: 'readonly',
+        beforeEach: 'readonly',
         jest: 'readonly',
         describe: 'readonly',
         test: 'readonly',
@@ -34,6 +59,7 @@ export default [
       },
     },
     rules: {
+      'max-lines': 'off',
       'max-lines-per-function': 'off',
     },
   },

@@ -18,4 +18,8 @@ export class ProductRepositoryPort {
   async update(_id, _product) {
     throw new Error('Method not implemented');
   }
+
+  async delete(_id) {
+    throw new Error('Method not implemented');
+  }
 }

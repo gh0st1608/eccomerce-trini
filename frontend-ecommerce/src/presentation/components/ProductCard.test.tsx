@@ -25,6 +25,7 @@ function renderCard(compact = false) {
           compact={compact}
           onAddToCart={onAddToCart}
           detailTo={`/products/${product.id}`}
+          categoryLabel="Camisetas urbanas"
         />
       </MemoryRouter>
     </ChakraProvider>,
@@ -52,5 +53,7 @@ describe('ProductCard storefront compact UI', () => {
     expect(screen.getByRole('link', { name: /ver detalle de/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /^ver detalle$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /agregar/i })).toBeInTheDocument()
+    expect(screen.getByText('Camisetas urbanas')).toBeInTheDocument()
+    expect(screen.queryByText('camisetas')).not.toBeInTheDocument()
   })
 })

@@ -7,8 +7,7 @@ const imageReferenceSchema = z.union([
 
 export const createCategorySchema = z.object({
   name: z.string().min(2),
-  slug: z.string().min(2),
-  description: z.string().max(500).optional().default(''),
+  slug: z.string().min(2).optional(),
   active: z.boolean().optional().default(true),
   parentId: z.string().min(1).optional(),
   imageUrl: imageReferenceSchema.optional(),

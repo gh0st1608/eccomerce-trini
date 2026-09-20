@@ -5,7 +5,6 @@ import {
   Button,
   Container,
   Flex,
-  Heading,
   HStack,
   SimpleGrid,
   Stack,
@@ -14,12 +13,16 @@ import {
 } from '@chakra-ui/react'
 import { GetFeaturedProductsUseCase } from '@application/use-cases/GetFeaturedProductsUseCase'
 import { ListCategoriesUseCase } from '@application/use-cases/ListCategoriesUseCase'
+import { GetStorefrontSettingsUseCase } from '@application/use-cases/GetStorefrontSettingsUseCase'
 import type { AdminCategory } from '@domain/entities/AdminCategory'
 import type { Product } from '@domain/entities/Product'
+import { defaultStorefrontSettings, type StorefrontSettings } from '@domain/entities/StorefrontSettings'
 import { createCategoryRepository } from '@infrastructure/factories/createCategoryRepository'
 import { createProductRepository } from '@infrastructure/factories/createProductRepository'
+import { createStorefrontSettingsRepository } from '@infrastructure/factories/createStorefrontSettingsRepository'
 import { InMemoryProductRepository } from '@infrastructure/repositories/InMemoryProductRepository'
 import { CatalogFilters } from '@presentation/components/CatalogFilters'
+import { CatalogPromoBanner } from '@presentation/components/CatalogPromoBanner'
 import { CategoryCarousel, type CarouselCategory } from '@presentation/components/CategoryCarousel'
 import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { ProductCard } from '@presentation/components/ProductCard'
@@ -28,6 +31,10 @@ import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+function normalizeCategoryReference(value: string) {
+  return value.trim().toLowerCase()
+}
+
 export function HomePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -35,6 +42,7 @@ export function HomePage() {
   const requestedCategory = searchParams.get('category')
   const [products, setProducts] = useState<Product[]>([])
   const [categoryDefinitions, setCategoryDefinitions] = useState<AdminCategory[]>([])
+  const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(defaultStorefrontSettings)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(() => requestedCategory ?? 'Todos')
   const [selectedMaxPrice, setSelectedMaxPrice] = useState(0)
@@ -50,35 +58,67 @@ export function HomePage() {
     return new GetFeaturedProductsUseCase(repository)
   }, [])
 
+  const getStorefrontSettingsUseCase = useMemo(
+    () => new GetStorefrontSettingsUseCase(createStorefrontSettingsRepository()),
+    [],
+  )
+
+  const categoryDisplayNameBySlug = useMemo(
+    () => new Map(
+      categoryDefinitions.map((category) => [normalizeCategoryReference(category.slug), category.name]),
+    ),
+    [categoryDefinitions],
+  )
+
+  const productCategorySlugsByGeneralSlug = useMemo(() => {
+    const activeCategories = categoryDefinitions.filter((category) => category.active)
+    const generalCategories = activeCategories.filter((category) => !category.parentId)
+
+    return new Map(
+      generalCategories.map((generalCategory) => [
+        normalizeCategoryReference(generalCategory.slug),
+        new Set([
+          normalizeCategoryReference(generalCategory.slug),
+          ...activeCategories
+            .filter((category) => category.parentId === generalCategory.id)
+            .map((category) => normalizeCategoryReference(category.slug)),
+        ]),
+      ]),
+    )
+  }, [categoryDefinitions])
+
   const categories = useMemo<CarouselCategory[]>(() => {
     const categoryBySlug = new Map(
-      categoryDefinitions.map((category) => [category.slug.toLowerCase(), category]),
+      categoryDefinitions.map((category) => [normalizeCategoryReference(category.slug), category]),
     )
-    const categoryById = new Map(categoryDefinitions.map((category) => [category.id, category]))
-    const visibleCategorySlugs = Array.from(new Set(products.map((product) => product.category))).filter(
-      (slug) => {
-        const category = categoryBySlug.get(slug.toLowerCase())
-        const parentCategory = category?.parentId ? categoryById.get(category.parentId) : undefined
-        return category?.active === true && (!parentCategory || parentCategory.active)
-      },
+    const activeGeneralCategories = categoryDefinitions.filter(
+      (category) => category.active && !category.parentId,
     )
 
     return [
       { name: 'Todos', count: products.length },
-      ...visibleCategorySlugs.map((slug) => {
-        const categoryDefinition = categoryBySlug.get(slug.toLowerCase())
+      ...activeGeneralCategories
+        .map((generalCategory) => {
+          const includedSlugs = productCategorySlugsByGeneralSlug.get(
+            normalizeCategoryReference(generalCategory.slug),
+          ) ?? new Set<string>()
+          const categoryProducts = products.filter((product) =>
+            includedSlugs.has(normalizeCategoryReference(product.category)),
+          )
+          const childImage = Array.from(includedSlugs)
+            .map((slug) => categoryBySlug.get(slug)?.imageUrl)
+            .find(Boolean)
 
-        return {
-          name: categoryDefinition?.name ?? slug,
-          value: slug,
-          count: products.filter((product) => product.category === slug).length,
-          imageUrl:
-            categoryDefinition?.imageUrl ??
-            products.find((product) => product.category === slug)?.imageUrl,
-        }
-      }),
+          return {
+            name: generalCategory.name,
+            value: generalCategory.slug,
+            count: categoryProducts.length,
+            imageUrl: generalCategory.imageUrl ?? childImage ?? categoryProducts[0]?.imageUrl,
+          }
+        })
+        .filter((category) => category.count > 0),
     ]
-  }, [categoryDefinitions, products])
+  }, [categoryDefinitions, productCategorySlugsByGeneralSlug, products])
 
   const minPrice = useMemo(() => {
     if (products.length === 0) return 0
@@ -94,7 +134,13 @@ export function HomePage() {
     const normalizedSearchTerm = searchTerm.trim().toLowerCase()
 
     const list = products.filter((product) => {
-      const categoryMatch = selectedCategory === 'Todos' || product.category === selectedCategory
+      const normalizedSelectedCategory = normalizeCategoryReference(selectedCategory)
+      const selectedGeneralSlugs = productCategorySlugsByGeneralSlug.get(normalizedSelectedCategory)
+      const normalizedProductCategory = normalizeCategoryReference(product.category)
+      const categoryMatch =
+        selectedCategory === 'Todos'
+        || selectedGeneralSlugs?.has(normalizedProductCategory)
+        || normalizedProductCategory === normalizedSelectedCategory
       const priceMatch = product.price <= selectedMaxPrice
       const featuredMatch = showFeaturedOnly ? product.featured : true
       const searchMatch =
@@ -116,7 +162,7 @@ export function HomePage() {
     }
 
     return [...list].sort((a, b) => Number(b.featured) - Number(a.featured))
-  }, [products, searchTerm, selectedCategory, selectedMaxPrice, showFeaturedOnly, sortMode])
+  }, [products, productCategorySlugsByGeneralSlug, searchTerm, selectedCategory, selectedMaxPrice, showFeaturedOnly, sortMode])
 
   const visibleSelectedProduct = useMemo(() => {
     if (!selectedProduct) {
@@ -195,6 +241,18 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
+    async function loadStorefrontSettings() {
+      try {
+        setStorefrontSettings(await getStorefrontSettingsUseCase.execute())
+      } catch {
+        setStorefrontSettings(defaultStorefrontSettings)
+      }
+    }
+
+    void loadStorefrontSettings()
+  }, [getStorefrontSettingsUseCase])
+
+  useEffect(() => {
     if (requestedCategory && !isLoading) {
       catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
@@ -226,104 +284,12 @@ export function HomePage() {
 
       <Container maxW="7xl" py={{ base: 4, md: 10 }} pb={{ base: 20, md: 10 }}>
         <VStack align="stretch" gap={{ base: 4, md: 8 }}>
-          <Box
-            position="relative"
-            overflow="hidden"
-            borderRadius={{ base: '2xl', md: '3xl' }}
-            px={{ base: 5, sm: 7, md: 10 }}
-            py={{ base: 6, md: 9 }}
-            bg="linear-gradient(118deg, #2b123d 0%, #673b7d 50%, #b697d3 100%)"
-            boxShadow="0 24px 50px rgba(74, 29, 99, 0.26)"
-          >
-            <Box
-              position="absolute"
-              width={{ base: '180px', md: '300px' }}
-              height={{ base: '180px', md: '300px' }}
-              borderRadius="full"
-              bg="rgba(244, 232, 255, 0.25)"
-              right={{ base: '-96px', md: '10%' }}
-              top={{ base: '-100px', md: '-145px' }}
-            />
-            <Box
-              position="absolute"
-              width={{ base: '150px', md: '230px' }}
-              height={{ base: '150px', md: '230px' }}
-              borderRadius="full"
-              border="1px solid rgba(255, 255, 255, 0.22)"
-              right={{ base: '-62px', md: '-34px' }}
-              bottom={{ base: '-92px', md: '-115px' }}
-            />
-
-            <Flex
-              position="relative"
-              direction={{ base: 'column', md: 'row' }}
-              gap={{ base: 5, md: 8 }}
-              justify="space-between"
-              align={{ base: 'start', md: 'center' }}
-            >
-              <Stack gap={{ base: 3, md: 4 }} maxW="2xl">
-                <Text
-                  color="#f4e8ff"
-                  fontWeight="bold"
-                  letterSpacing="0.16em"
-                  fontSize={{ base: 'xs', md: 'sm' }}
-                >
-                  OFERTA DE TEMPORADA
-                </Text>
-                <Heading
-                  color="white"
-                  fontFamily="'Space Grotesk', sans-serif"
-                  fontSize={{ base: '2xl', sm: '3xl', md: '5xl' }}
-                  lineHeight="1"
-                >
-                  Hasta 30% OFF en prendas seleccionadas
-                </Heading>
-                <Text color="#f4e8ff" fontSize={{ base: 'sm', md: 'lg' }} maxW="xl">
-                  Encuentra tus favoritos de Mayo Collection con precios especiales por tiempo
-                  limitado.
-                </Text>
-                <HStack gap={3} wrap="wrap">
-                  <Button
-                    bg="#f4e8ff"
-                    color="#4a1d63"
-                    _hover={{ bg: '#ffffff' }}
-                    onClick={() => setShowFeaturedOnly(true)}
-                  >
-                    Ver ofertas
-                  </Button>
-                  <Button
-                    variant="outline"
-                    borderColor="rgba(255, 255, 255, 0.55)"
-                    color="white"
-                    _hover={{ bg: 'whiteAlpha.200' }}
-                    onClick={() => navigate('/cart')}
-                  >
-                    Carrito ({cartItemCount})
-                  </Button>
-                </HStack>
-              </Stack>
-
-              <Box
-                display={{ base: 'none', md: 'block' }}
-                minW="210px"
-                borderRadius="2xl"
-                bg="rgba(255, 255, 255, 0.12)"
-                border="1px solid rgba(255, 255, 255, 0.22)"
-                p={5}
-                backdropFilter="blur(8px)"
-              >
-                <Text color="#f4e8ff" fontSize="xs" fontWeight="bold" letterSpacing="0.14em">
-                  MAYO COLLECTION
-                </Text>
-                <Text color="white" fontSize="3xl" fontWeight="bold" mt={2}>
-                  SALE
-                </Text>
-                <Text color="#f4e8ff" fontSize="sm" mt={1}>
-                  Estilos para todos los dias.
-                </Text>
-              </Box>
-            </Flex>
-          </Box>
+          <CatalogPromoBanner
+            banner={storefrontSettings.promoBanner}
+            cartCount={cartItemCount}
+            onShowOffers={() => setShowFeaturedOnly(true)}
+            onOpenCart={() => navigate('/cart')}
+          />
 
           {errorMessage ? (
             <Alert.Root status="warning" borderRadius="xl" variant="subtle">
@@ -443,6 +409,7 @@ export function HomePage() {
                             detailTo={`/products/${product.id}`}
                             onAddToCart={addToCart}
                             quantityInCart={quantityByProductId[product.id] ?? 0}
+                            categoryLabel={categoryDisplayNameBySlug.get(normalizeCategoryReference(product.category))}
                           />
                         </Box>
                       ))}
@@ -485,6 +452,7 @@ export function HomePage() {
                                   detailTo={`/products/${product.id}`}
                                   onAddToCart={addToCart}
                                   quantityInCart={quantityByProductId[product.id] ?? 0}
+                                  categoryLabel={categoryDisplayNameBySlug.get(normalizeCategoryReference(product.category))}
                                 />
                               </Box>
                             ))}

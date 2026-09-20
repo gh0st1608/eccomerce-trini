@@ -6,5 +6,6 @@ export const createProductRouter = ({ productController }) => {
   const router = Router();
   router.post('/products', validateBody(createProductSchema), productController.createProduct);
   router.put('/products/:id', validateBody(createProductSchema), productController.updateProduct);
+  router.delete('/products/:id', productController.deleteProduct);
   return router;
 };

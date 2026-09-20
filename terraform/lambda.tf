@@ -132,12 +132,13 @@ resource "aws_lambda_function" "admin_api" {
       S3_BUCKET_PUBLIC_BASE_URL = var.use_localstack ? "${var.localstack_endpoint}/${aws_s3_bucket.product_images.bucket}" : "https://${aws_cloudfront_distribution.product_images[0].domain_name}"
 
       # Persistence
-      PERSISTENCE_DRIVER            = "dynamodb"
-      DYNAMODB_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : ""
-      DYNAMODB_TABLE_PRODUCTS       = aws_dynamodb_table.products.name
-      DYNAMODB_TABLE_CATEGORIES     = aws_dynamodb_table.categories.name
-      DYNAMODB_TABLE_STORES         = aws_dynamodb_table.stores.name
-      DYNAMODB_TABLE_INTERNAL_USERS = aws_dynamodb_table.internal_users.name
+      PERSISTENCE_DRIVER                 = "dynamodb"
+      DYNAMODB_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : ""
+      DYNAMODB_TABLE_PRODUCTS            = aws_dynamodb_table.products.name
+      DYNAMODB_TABLE_CATEGORIES          = aws_dynamodb_table.categories.name
+      DYNAMODB_TABLE_STORES              = aws_dynamodb_table.stores.name
+      DYNAMODB_TABLE_INTERNAL_USERS      = aws_dynamodb_table.internal_users.name
+      DYNAMODB_TABLE_STOREFRONT_SETTINGS = aws_dynamodb_table.storefront_settings.name
     }
   }
 }

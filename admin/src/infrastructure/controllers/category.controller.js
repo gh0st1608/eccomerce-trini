@@ -5,6 +5,7 @@ export const createCategoryController = ({
   listCategoriesUseCase,
   createCategoryUseCase,
   updateCategoryUseCase,
+  deleteCategoryUseCase,
 }) => ({
   listCategories: async (req, res, next) => {
     try {
@@ -43,6 +44,21 @@ export const createCategoryController = ({
         successResponse({
           data: { category },
           message: 'Category updated successfully',
+          traceId: req.context.traceId,
+        }),
+      );
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  deleteCategory: async (req, res, next) => {
+    try {
+      await deleteCategoryUseCase.execute(req.params.id);
+      res.json(
+        successResponse({
+          data: {},
+          message: 'Category deleted successfully',
           traceId: req.context.traceId,
         }),
       );

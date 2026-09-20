@@ -8,6 +8,7 @@ export const createProductController = ({
   getProductOptionsUseCase,
   createProductUseCase,
   updateProductUseCase,
+  deleteProductUseCase,
   getProductByIdUseCase,
   registerCheckoutItemsUseCase,
 }) => ({
@@ -104,6 +105,21 @@ export const createProductController = ({
         successResponse({
           data: { product },
           message: 'Product updated successfully',
+          traceId: req.context.traceId,
+        }),
+      );
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  deleteProduct: async (req, res, next) => {
+    try {
+      await deleteProductUseCase.execute(req.params.id);
+      res.json(
+        successResponse({
+          data: {},
+          message: 'Product deleted successfully',
           traceId: req.context.traceId,
         }),
       );

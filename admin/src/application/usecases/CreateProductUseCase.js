@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { BusinessError } from '../../domain/exceptions/index.js';
 import { prepareProductImagesForStorage } from '../services/prepareProductImagesForStorage.js';
 
@@ -12,8 +13,11 @@ export class CreateProductUseCase {
       throw new BusinessError('Stock cannot be negative');
     }
 
+    const productId = randomUUID();
+    const payloadWithId = { ...payload, id: productId };
     const payloadWithStoredImages = await prepareProductImagesForStorage({
-      payload,
+      payload: payloadWithId,
+      productId,
       productImageStorage: this.productImageStorage,
     });
 

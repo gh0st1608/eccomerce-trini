@@ -70,10 +70,16 @@ describe('UseCases', () => {
           .fn()
           .mockResolvedValue([{ id: 'cat-1', name: 'Camisas', slug: 'camisas', active: true }]),
       },
+      storefrontSettingsRepository: {
+        get: jest.fn().mockResolvedValue({
+          catalogOptions: { colors: ['Violeta'], sizes: ['Única'] },
+        }),
+      },
     });
 
     const result = await useCase.execute();
     expect(result.colors).toContain('Negro');
+    expect(result.colors).toContain('Violeta');
     expect(result.sizes).toContain('M');
     expect(result.categories[0].slug).toBe('camisas');
   });
@@ -123,6 +129,24 @@ describe('UseCases', () => {
     });
 
     expect(uploadDataUrl).toHaveBeenCalledTimes(3);
+    const createdPayload = create.mock.calls[0][0];
+    expect(createdPayload.id).toMatch(/^[0-9a-f-]{36}$/);
+    const expectedKeyPrefix = `products/${createdPayload.id}/pl-tech-01-polo-tech`;
+    expect(uploadDataUrl).toHaveBeenNthCalledWith(1, {
+      dataUrl: pngDataUrl,
+      keyPrefix: expectedKeyPrefix,
+      fileNameHint: 'main-image',
+    });
+    expect(uploadDataUrl).toHaveBeenNthCalledWith(2, {
+      dataUrl: pngDataUrl,
+      keyPrefix: expectedKeyPrefix,
+      fileNameHint: 'gallery-1',
+    });
+    expect(uploadDataUrl).toHaveBeenNthCalledWith(3, {
+      dataUrl: pngDataUrl,
+      keyPrefix: expectedKeyPrefix,
+      fileNameHint: 'variant-1-PL-TECH-01-BLK',
+    });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         imageUrl: 'https://cdn.example.com/products/main.jpg',
@@ -158,17 +182,20 @@ describe('UseCases', () => {
     expect(result.length).toBe(1);
   });
 
-  test('create category rejects invalid slug', async () => {
+  test('create category derives the slug from its name', async () => {
+    const create = jest.fn().mockResolvedValue({ id: 'cat-polos', slug: 'polos-deportivos' });
     const useCase = new CreateCategoryUseCase({
       categoryRepository: {
         findBySlug: jest.fn().mockResolvedValue(null),
-        create: jest.fn(),
+        create,
       },
     });
 
-    await expect(
-      useCase.execute({ name: 'Polos', slug: 'Polos Invalid', description: '', active: true }),
-    ).rejects.toBeInstanceOf(BusinessError);
+    await useCase.execute({ name: 'Polos Deportivos', slug: 'valor-ignorado', active: true });
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Polos Deportivos', slug: 'polos-deportivos' }),
+    );
   });
 
   test('create category accepts a slug with ñ', async () => {
@@ -227,15 +254,43 @@ describe('UseCases', () => {
     expect(categoryRepository.findById).toHaveBeenCalledWith('cat-general');
     expect(uploadDataUrl).toHaveBeenCalledWith({
       dataUrl: pngDataUrl,
-      keyPrefix: 'categories/polos',
+      keyPrefix: expect.stringMatching(/^categories\/[0-9a-f-]{36}\/polos$/),
       fileNameHint: 'cover',
     });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
+        id: expect.stringMatching(/^[0-9a-f-]{36}$/),
         parentId: 'cat-general',
         imageUrl: 'https://cdn.example.com/categories/polos/cover.webp',
       }),
     );
+  });
+
+  test('update category stores a new cover under the stable category id', async () => {
+    const update = jest.fn().mockResolvedValue({ id: 'cat-1' });
+    const uploadDataUrl = jest
+      .fn()
+      .mockResolvedValue('https://cdn.example.com/categories/cat-1/polos/cover.webp');
+    const useCase = new UpdateCategoryUseCase({
+      categoryRepository: {
+        findById: jest.fn().mockResolvedValue({ id: 'cat-1', slug: 'polos' }),
+        findBySlug: jest.fn().mockResolvedValue({ id: 'cat-1' }),
+        update,
+      },
+      productImageStorage: { uploadDataUrl },
+    });
+
+    await useCase.execute('cat-1', {
+      name: 'Polos Premium',
+      active: true,
+      imageUrl: pngDataUrl,
+    });
+
+    expect(uploadDataUrl).toHaveBeenCalledWith({
+      dataUrl: pngDataUrl,
+      keyPrefix: 'categories/cat-1/polos-premium',
+      fileNameHint: 'cover',
+    });
   });
 
   test('create category rejects a nested parent', async () => {
@@ -336,6 +391,11 @@ describe('UseCases', () => {
     });
 
     expect(uploadDataUrl).toHaveBeenCalledTimes(1);
+    expect(uploadDataUrl).toHaveBeenCalledWith({
+      dataUrl: pngDataUrl,
+      keyPrefix: 'products/product-1/pl-01-polo',
+      fileNameHint: 'main-image',
+    });
     expect(update).toHaveBeenCalledWith(
       'product-1',
       expect.objectContaining({

@@ -2,7 +2,7 @@ export interface AdminCategory {
   id: string
   name: string
   slug: string
-  description: string
+  description?: string
   active: boolean
   parentId?: string
   imageUrl?: string
@@ -10,8 +10,7 @@ export interface AdminCategory {
 
 export interface CreateAdminCategoryInput {
   name: string
-  slug: string
-  description: string
+  slug?: string
   active: boolean
   parentId?: string
   imageUrl?: string

@@ -24,6 +24,13 @@ export const CATEGORIES = [
     description: 'Accesorios y equipamiento para actividad fisica.',
     active: true,
   },
+  {
+    id: 'cat-004',
+    name: 'Niños',
+    slug: 'ninos',
+    description: 'Ropa, juguetes y accesorios para niños.',
+    active: true,
+  },
 ];
 
 export class InMemoryCategoryRepository extends CategoryRepositoryPort {
@@ -44,10 +51,9 @@ export class InMemoryCategoryRepository extends CategoryRepositoryPort {
 
   async create(category) {
     const newCategory = {
-      id: randomUUID(),
+      id: category.id ?? randomUUID(),
       name: category.name,
       slug: category.slug,
-      description: category.description,
       active: category.active,
       parentId: category.parentId,
       imageUrl: category.imageUrl,
@@ -67,7 +73,6 @@ export class InMemoryCategoryRepository extends CategoryRepositoryPort {
       ...CATEGORIES[index],
       name: category.name,
       slug: category.slug,
-      description: category.description,
       active: category.active,
       parentId: category.parentId,
       imageUrl: category.imageUrl,
@@ -75,5 +80,12 @@ export class InMemoryCategoryRepository extends CategoryRepositoryPort {
 
     CATEGORIES[index] = updatedCategory;
     return new Category(updatedCategory);
+  }
+
+  async delete(id) {
+    const index = CATEGORIES.findIndex((entry) => entry.id === id);
+    if (index >= 0) {
+      CATEGORIES.splice(index, 1);
+    }
   }
 }

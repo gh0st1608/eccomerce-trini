@@ -165,21 +165,18 @@ export function CartProvider({ children }: PropsWithChildren) {
     return () => window.clearTimeout(timeoutId)
   }, [lastAddedProduct])
 
-  const value = useMemo<CartContextValue>(
-    () => ({
-      cartItems,
-      cartItemsList,
-      cartItemCount,
-      cartSubtotal,
-      addToCart,
-      increaseQuantity,
-      removeFromCart,
-      moveOneItemToGift,
-      moveOneItemToStandard,
-      clearCart,
-    }),
-    [cartItems, cartItemsList, cartItemCount, cartSubtotal],
-  )
+  const value: CartContextValue = {
+    cartItems,
+    cartItemsList,
+    cartItemCount,
+    cartSubtotal,
+    addToCart,
+    increaseQuantity,
+    removeFromCart,
+    moveOneItemToGift,
+    moveOneItemToStandard,
+    clearCart,
+  }
 
   return (
     <CartContext.Provider value={value}>

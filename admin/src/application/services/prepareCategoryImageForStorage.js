@@ -9,7 +9,11 @@ const sanitizeSegment = (value, fallback) => {
   return normalized || fallback;
 };
 
-export const prepareCategoryImageForStorage = async ({ payload, productImageStorage }) => {
+export const prepareCategoryImageForStorage = async ({
+  payload,
+  categoryId,
+  productImageStorage,
+}) => {
   const imageUrl = String(payload.imageUrl ?? '').trim();
   if (!imageUrl.startsWith('data:image/') || !productImageStorage?.uploadDataUrl) {
     return { ...payload, imageUrl: imageUrl || undefined };
@@ -19,7 +23,7 @@ export const prepareCategoryImageForStorage = async ({ payload, productImageStor
     ...payload,
     imageUrl: await productImageStorage.uploadDataUrl({
       dataUrl: imageUrl,
-      keyPrefix: `categories/${sanitizeSegment(payload.slug, 'category')}`,
+      keyPrefix: `categories/${sanitizeSegment(categoryId, 'unassigned')}/${sanitizeSegment(payload.slug, 'category')}`,
       fileNameHint: 'cover',
     }),
   };

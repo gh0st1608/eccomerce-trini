@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { Product } from '../../domain/entities/Product.js';
 import { ProductRepositoryPort } from '../../application/ports/ProductRepositoryPort.js';
 import {
@@ -57,7 +57,7 @@ export class DynamoDbProductRepository extends ProductRepositoryPort {
   async create(product) {
     const newProduct = {
       ...normalizeProductRecord(product),
-      id: randomUUID(),
+      id: product.id ?? randomUUID(),
       checkoutFrequency: 0,
     };
 
@@ -81,6 +81,12 @@ export class DynamoDbProductRepository extends ProductRepositoryPort {
 
     await this.documentClient.send(new PutCommand({ TableName: this.tableName, Item: updatedRecord }));
     return new Product(updatedRecord);
+  }
+
+  async delete(id) {
+    await this.documentClient.send(
+      new DeleteCommand({ TableName: this.tableName, Key: { id } }),
+    );
   }
 
   async registerCheckoutItems(items = []) {

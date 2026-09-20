@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Heading, HStack, Image, Stack, Text } from '@chakra-ui/react'
 import type { Product } from '@domain/entities/Product'
 import { formatCurrency } from '@shared/utils/currency'
+import { formatSlugLabel } from '@shared/utils/slug'
 import { Link } from 'react-router-dom'
 
 interface ProductCardProps {
@@ -9,6 +10,7 @@ interface ProductCardProps {
   onAddToCart?: (product: Product) => void
   detailTo?: string
   compact?: boolean
+  categoryLabel?: string
 }
 
 export function ProductCard({
@@ -17,8 +19,10 @@ export function ProductCard({
   onAddToCart,
   detailTo,
   compact = false,
+  categoryLabel,
 }: ProductCardProps) {
   const detailLabel = `Ver detalle de ${product.name}`
+  const readableCategory = categoryLabel ?? formatSlugLabel(product.category)
   const discountPercent =
     product.discountPercent ??
     (product.originalPrice && product.originalPrice > product.price
@@ -106,7 +110,7 @@ export function ProductCard({
             textOverflow="ellipsis"
             whiteSpace="nowrap"
           >
-            {product.category}
+            {readableCategory}
           </Badge>
         </Box>
 
@@ -241,7 +245,7 @@ export function ProductCard({
           bg="#3f1d50"
           color="white"
         >
-          {product.category}
+          {readableCategory}
         </Badge>
       </Box>
       <Box p={{ base: compact ? 3 : 4, md: 6 }}>

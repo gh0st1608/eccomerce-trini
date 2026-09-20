@@ -65,6 +65,7 @@ data "aws_iam_policy_document" "admin_lambda_dynamodb" {
       aws_dynamodb_table.categories.arn,
       aws_dynamodb_table.stores.arn,
       aws_dynamodb_table.internal_users.arn,
+      aws_dynamodb_table.storefront_settings.arn,
     ]
   }
 }

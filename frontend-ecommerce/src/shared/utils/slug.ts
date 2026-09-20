@@ -13,3 +13,7 @@ export function normalizeSlug(value: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
 }
+
+export function formatSlugLabel(value: string): string {
+  return value.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+}

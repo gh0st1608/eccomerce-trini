@@ -8,4 +8,5 @@ export interface AdminCategoryRepository {
   list(): Promise<AdminCategory[]>
   create(payload: CreateAdminCategoryInput): Promise<AdminCategory>
   update(payload: UpdateAdminCategoryInput): Promise<AdminCategory>
+  delete(id: string): Promise<void>
 }

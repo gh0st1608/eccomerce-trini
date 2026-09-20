@@ -19,6 +19,7 @@ export class UpdateProductUseCase {
 
     const payloadWithStoredImages = await prepareProductImagesForStorage({
       payload,
+      productId: id,
       productImageStorage: this.productImageStorage,
     });
 

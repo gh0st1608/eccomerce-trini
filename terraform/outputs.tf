@@ -23,6 +23,11 @@ output "dynamodb_table_categories" {
   value = aws_dynamodb_table.categories.name
 }
 
+output "dynamodb_table_storefront_settings" {
+  description = "DynamoDB table used for storefront settings"
+  value       = aws_dynamodb_table.storefront_settings.name
+}
+
 output "dynamodb_table_stores" {
   value = aws_dynamodb_table.stores.name
 }

@@ -6,5 +6,6 @@ export const createCategoryRouter = ({ categoryController }) => {
   const router = Router();
   router.post('/categories', validateBody(createCategorySchema), categoryController.createCategory);
   router.put('/categories/:id', validateBody(createCategorySchema), categoryController.updateCategory);
+  router.delete('/categories/:id', categoryController.deleteCategory);
   return router;
 };

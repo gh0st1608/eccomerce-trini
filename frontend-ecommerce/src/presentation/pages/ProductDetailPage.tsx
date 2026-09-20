@@ -77,13 +77,6 @@ export function ProductDetailPage() {
       : undefined)
 
   useEffect(() => {
-    setSelectedImageIndex(0)
-    setSelectedColor('')
-    setSelectedSize('')
-    setSelectedQuantity(1)
-  }, [productId])
-
-  useEffect(() => {
     async function loadProduct() {
       if (!productId) {
         setErrorMessage('Producto no encontrado.')
@@ -93,6 +86,11 @@ export function ProductDetailPage() {
 
       const fallbackRepository = new InMemoryProductRepository()
       const fallbackProduct = await fallbackRepository.findById(productId)
+
+      setSelectedImageIndex(0)
+      setSelectedColor('')
+      setSelectedSize('')
+      setSelectedQuantity(1)
 
       if (fallbackProduct) {
         setProduct(fallbackProduct)

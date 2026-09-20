@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { Category } from '../../domain/entities/Category.js';
 import { CategoryRepositoryPort } from '../../application/ports/CategoryRepositoryPort.js';
 
@@ -36,10 +36,9 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
 
   async create(category) {
     const newCategory = {
-      id: randomUUID(),
+      id: category.id ?? randomUUID(),
       name: category.name,
       slug: category.slug,
-      description: category.description,
       active: category.active,
       parentId: category.parentId,
       imageUrl: category.imageUrl,
@@ -61,7 +60,6 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
       id,
       name: category.name,
       slug: category.slug,
-      description: category.description,
       active: category.active,
       parentId: category.parentId,
       imageUrl: category.imageUrl,
@@ -71,5 +69,11 @@ export class DynamoDbCategoryRepository extends CategoryRepositoryPort {
       new PutCommand({ TableName: this.tableName, Item: updatedCategory }),
     );
     return new Category(updatedCategory);
+  }
+
+  async delete(id) {
+    await this.documentClient.send(
+      new DeleteCommand({ TableName: this.tableName, Key: { id } }),
+    );
   }
 }

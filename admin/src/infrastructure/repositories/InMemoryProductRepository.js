@@ -590,7 +590,7 @@ export class InMemoryProductRepository extends ProductRepositoryPort {
 
     const newProduct = {
       ...normalizedProduct,
-      id: randomUUID(),
+      id: product.id ?? randomUUID(),
     };
 
     PRODUCTS.push(newProduct);
@@ -611,6 +611,14 @@ export class InMemoryProductRepository extends ProductRepositoryPort {
 
     PRODUCTS[index] = updatedRecord;
     return new Product(updatedRecord);
+  }
+
+  async delete(id) {
+    const index = PRODUCTS.findIndex((entry) => entry.id === id);
+    if (index >= 0) {
+      PRODUCTS.splice(index, 1);
+      this.checkoutFrequencyByProductId.delete(id);
+    }
   }
 
   async registerCheckoutItems(items = []) {

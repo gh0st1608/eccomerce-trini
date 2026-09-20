@@ -23,6 +23,17 @@ resource "aws_dynamodb_table" "categories" {
   }
 }
 
+resource "aws_dynamodb_table" "storefront_settings" {
+  name         = "${local.name_prefix}-storefront-settings"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
 resource "aws_dynamodb_table" "stores" {
   name         = "${local.name_prefix}-stores"
   billing_mode = "PAY_PER_REQUEST"

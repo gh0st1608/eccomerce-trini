@@ -18,4 +18,8 @@ export class CategoryRepositoryPort {
   async update(_id, _category) {
     throw new Error('Method not implemented');
   }
+
+  async delete(_id) {
+    throw new Error('Method not implemented');
+  }
 }

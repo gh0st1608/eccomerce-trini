@@ -12,7 +12,7 @@ describe('HttpPickupStoreRepository', () => {
         ],
       },
     })
-    const httpClient: HttpClient = { get, post: vi.fn(), put: vi.fn() }
+    const httpClient: HttpClient = { get, post: vi.fn(), put: vi.fn(), delete: vi.fn() }
     const repository = new HttpPickupStoreRepository(httpClient)
 
     const stores = await repository.listPickupStores()

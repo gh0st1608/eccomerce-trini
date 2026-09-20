@@ -4,6 +4,7 @@ import { DynamoDbCategoryRepository } from '../../infrastructure/repositories/Dy
 import { DynamoDbStoreRepository } from '../../infrastructure/repositories/DynamoDbStoreRepository.js';
 import { DynamoDbInternalUserRepository } from '../../infrastructure/repositories/DynamoDbInternalUserRepository.js';
 import { DynamoDbProductRepository } from '../../infrastructure/repositories/DynamoDbProductRepository.js';
+import { DynamoDbStorefrontSettingsRepository } from '../../infrastructure/repositories/DynamoDbStorefrontSettingsRepository.js';
 import { createDynamoDbDocumentClient } from '../../infrastructure/clients/DynamoDbClientFactory.js';
 
 const fakeClient = (impl) => ({ send: jest.fn(impl) });
@@ -50,6 +51,22 @@ describe('DynamoDbCategoryRepository', () => {
 
     expect(created.id).toBeDefined();
     expect(client.send.mock.calls[0][0]).toBeInstanceOf(PutCommand);
+  });
+
+  test('create preserves a caller-provided id', async () => {
+    const client = fakeClient(() => ({}));
+    const repo = new DynamoDbCategoryRepository({ documentClient: client, tableName: 'categories' });
+
+    const created = await repo.create({
+      id: 'category-stable-id',
+      name: 'Hogar',
+      slug: 'hogar',
+      description: '',
+      active: true,
+    });
+
+    expect(created.id).toBe('category-stable-id');
+    expect(client.send.mock.calls[0][0].input.Item.id).toBe('category-stable-id');
   });
 
   test('update returns null when the category does not exist', async () => {
@@ -136,6 +153,25 @@ describe('DynamoDbInternalUserRepository', () => {
   });
 });
 
+describe('DynamoDbStorefrontSettingsRepository', () => {
+  test('uses a consistent read so saved catalog options are immediately available', async () => {
+    const client = fakeClient(() => ({}));
+    const repo = new DynamoDbStorefrontSettingsRepository({
+      documentClient: client,
+      tableName: 'storefront-settings',
+    });
+
+    await repo.get();
+
+    expect(client.send.mock.calls[0][0]).toBeInstanceOf(GetCommand);
+    expect(client.send.mock.calls[0][0].input).toMatchObject({
+      TableName: 'storefront-settings',
+      Key: { id: 'storefront' },
+      ConsistentRead: true,
+    });
+  });
+});
+
 describe('DynamoDbProductRepository', () => {
   const rawProduct = {
     id: 'SKU-100',
@@ -181,6 +217,21 @@ describe('DynamoDbProductRepository', () => {
     const created = await repo.create({ name: 'Nuevo', category: 'ropa', price: 20 });
     expect(created.id).toBeDefined();
     expect(client.send.mock.calls[0][0]).toBeInstanceOf(PutCommand);
+  });
+
+  test('create preserves a caller-provided product id', async () => {
+    const client = fakeClient(() => ({}));
+    const repo = new DynamoDbProductRepository({ documentClient: client, tableName: 'products' });
+
+    const created = await repo.create({
+      id: 'product-stable-id',
+      name: 'Nuevo',
+      category: 'ropa',
+      price: 20,
+    });
+
+    expect(created.id).toBe('product-stable-id');
+    expect(client.send.mock.calls[0][0].input.Item.id).toBe('product-stable-id');
   });
 
   test('update returns null when the product does not exist', async () => {

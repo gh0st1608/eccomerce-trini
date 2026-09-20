@@ -63,6 +63,7 @@ export const env = {
   dynamoDbTableCategories: process.env.DYNAMODB_TABLE_CATEGORIES,
   dynamoDbTableStores: process.env.DYNAMODB_TABLE_STORES,
   dynamoDbTableInternalUsers: process.env.DYNAMODB_TABLE_INTERNAL_USERS,
+  dynamoDbTableStorefrontSettings: process.env.DYNAMODB_TABLE_STOREFRONT_SETTINGS,
   newRelicLicenseKey: process.env.NEW_RELIC_LICENSE_KEY,
   newRelicAppName: process.env.NEW_RELIC_APP_NAME,
   otelServiceName: process.env.OTEL_SERVICE_NAME,
@@ -99,7 +100,8 @@ if (
   && (!env.dynamoDbTableProducts
     || !env.dynamoDbTableCategories
     || !env.dynamoDbTableStores
-    || !env.dynamoDbTableInternalUsers)
+    || !env.dynamoDbTableInternalUsers
+    || !env.dynamoDbTableStorefrontSettings)
 ) {
   throw new Error(
     'Missing DYNAMODB_TABLE_* env vars when PERSISTENCE_DRIVER=dynamodb',

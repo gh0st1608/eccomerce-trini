@@ -21,11 +21,12 @@ vi.mock('@infrastructure/factories/createCategoryRepository', () => ({
         active: true,
         parentId: '7',
       },
-      { id: '3', name: 'Bottoms', slug: 'bottoms', description: '', active: true },
-      { id: '4', name: 'Dress', slug: 'dress', description: '', active: true },
+      { id: '3', name: 'Bottoms', slug: 'bottoms', description: '', active: true, parentId: '8' },
+      { id: '4', name: 'Dress', slug: 'dress', description: '', active: true, parentId: '8' },
       { id: '5', name: 'Accessories', slug: 'accessories', description: '', active: false },
       { id: '6', name: 'Shirts', slug: 'shirts', description: '', active: true },
       { id: '7', name: 'Moda', slug: 'moda', description: '', active: false },
+      { id: '8', name: 'Coleccion', slug: 'coleccion', description: '', active: true },
     ],
   }),
 }))
@@ -73,6 +74,23 @@ describe('HomePage', () => {
       screen.queryByRole('button', { name: /ver productos de accessories/i }),
     ).not.toBeInTheDocument()
     expect(screen.getAllByText(/set eclipse/i).length).toBeGreaterThan(0)
+  })
+
+  it('filters a general category including products from all its specific categories', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <AppProviders>
+        <AppRouter />
+      </AppProviders>,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /ver productos de coleccion/i }))
+
+    expect(screen.getByText('2 producto(s) disponibles')).toBeInTheDocument()
+    expect(screen.getAllByText(/pantalon skyline/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/vestido nimbus/i).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: /ver productos de bottoms/i })).not.toBeInTheDocument()
   })
 
   it('moves the view to the filtered catalog when opened from a category link', async () => {

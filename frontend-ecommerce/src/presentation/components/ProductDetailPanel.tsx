@@ -77,8 +77,7 @@ export function ProductDetailPanel({
 
         <Text color="#475569">{product.description}</Text>
 
-        <HStack justify="space-between" color="#64748b" fontSize="sm">
-          <Text>SKU: {product.id}</Text>
+        <HStack justify="end" color="#64748b" fontSize="sm">
           <Text>{quantityInCart} en carrito</Text>
         </HStack>
 

@@ -288,6 +288,47 @@ describe('Admin API', () => {
     expect(response.body.error.code).toBe('NOT_FOUND');
   });
 
+  test('DELETE /api/v1/admin/products/:id only deletes inactive products', async () => {
+    const token = await getAuthToken();
+    const payload = {
+      name: 'Producto Eliminar',
+      sku: 'DELETE-01',
+      category: 'polos',
+      description: 'producto para eliminar',
+      imageUrl: 'https://picsum.photos/seed/delete-product/900/1200',
+      price: 29.9,
+      currency: 'PEN',
+      stock: 1,
+      featured: false,
+      status: 'active',
+    };
+    const created = await request(app)
+      .post('/api/v1/admin/products')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+    const productId = created.body.data.product.id;
+
+    const activeDelete = await request(app)
+      .delete(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(activeDelete.status).toBe(400);
+    expect(activeDelete.body.error.code).toBe('BUSINESS_ERROR');
+
+    await request(app)
+      .put(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...payload, status: 'inactive' });
+    const inactiveDelete = await request(app)
+      .delete(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(inactiveDelete.status).toBe(200);
+
+    const missingDelete = await request(app)
+      .delete(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(missingDelete.status).toBe(404);
+  });
+
   test('POST /api/v1/admin/internal-users', async () => {
     const token = await getAuthToken();
     const response = await request(app)
@@ -373,7 +414,42 @@ describe('Admin API', () => {
     expect(response.body.error.code).toBe('NOT_FOUND');
   });
 
-  test('POST /api/v1/admin/categories returns 400 for invalid slug format', async () => {
+  test('DELETE /api/v1/admin/categories/:id only deletes inactive categories', async () => {
+    const token = await getAuthToken();
+    const payload = {
+      name: 'Categoria Eliminar',
+      slug: 'categoria-eliminar',
+      description: 'categoria para eliminar',
+      active: true,
+    };
+    const created = await request(app)
+      .post('/api/v1/admin/categories')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+    const categoryId = created.body.data.category.id;
+
+    const activeDelete = await request(app)
+      .delete(`/api/v1/admin/categories/${categoryId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(activeDelete.status).toBe(400);
+    expect(activeDelete.body.error.code).toBe('BUSINESS_ERROR');
+
+    await request(app)
+      .put(`/api/v1/admin/categories/${categoryId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ...payload, active: false });
+    const inactiveDelete = await request(app)
+      .delete(`/api/v1/admin/categories/${categoryId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(inactiveDelete.status).toBe(200);
+
+    const missingDelete = await request(app)
+      .delete(`/api/v1/admin/categories/${categoryId}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(missingDelete.status).toBe(404);
+  });
+
+  test('POST /api/v1/admin/categories derives the slug from the name', async () => {
     const token = await getAuthToken();
     const response = await request(app)
       .post('/api/v1/admin/categories')
@@ -385,9 +461,50 @@ describe('Admin API', () => {
       active: true,
     });
 
-    expect(response.status).toBe(400);
-    expect(response.body.success).toBe(false);
-    expect(response.body.error.code).toBe('BUSINESS_ERROR');
+    expect(response.status).toBe(201);
+    expect(response.body.data.category.slug).toBe('camisas-formales');
+  });
+
+  test('storefront settings are publicly readable and require admin access to update', async () => {
+    const unauthorized = await request(app)
+      .put('/api/v1/admin/storefront-settings')
+      .send({});
+    expect(unauthorized.status).toBe(401);
+
+    const token = await getAuthToken();
+    const settings = {
+      catalogOptions: {
+        colors: ['Negro', 'Violeta'],
+        sizes: ['S', 'M', 'Unica'],
+      },
+      promoBanner: {
+        enabled: true,
+        eyebrow: 'NOVEDADES',
+        title: 'Coleccion especial',
+        content: 'Disponible por tiempo limitado.',
+        imageUrl: '',
+        ctaLabel: 'Ver productos',
+      },
+    };
+    const updated = await request(app)
+      .put('/api/v1/admin/storefront-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send(settings);
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.settings).toEqual(settings);
+
+    const read = await request(app)
+      .get('/api/v1/admin/storefront-settings')
+      .set('Authorization', `Bearer ${token}`);
+    expect(read.status).toBe(200);
+    expect(read.body.data.settings).toEqual(settings);
+
+    const productOptions = await request(app)
+      .get('/api/v1/admin/products/options')
+      .set('Authorization', `Bearer ${token}`);
+    expect(productOptions.status).toBe(200);
+    expect(productOptions.body.data.colors).toContain('Violeta');
+    expect(productOptions.body.data.sizes).toContain('Unica');
   });
 
   test('POST /api/v1/admin/categories returns 400 for duplicated slug', async () => {

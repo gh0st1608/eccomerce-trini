@@ -123,4 +123,8 @@ export class HttpAdminProductRepository implements AdminProductRepository {
 
     return mapSingleProductResponse(response)
   }
+
+  async delete(id: string): Promise<void> {
+    await this.httpClient.delete(`/products/${id}`)
+  }
 }

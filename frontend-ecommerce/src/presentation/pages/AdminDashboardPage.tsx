@@ -8,7 +8,6 @@ import {
   Flex,
   Heading,
   HStack,
-  Image,
   Input,
   Separator,
   Text,
@@ -20,21 +19,27 @@ import type { AdminProduct, AdminProductOptions, CreateAdminProductInput } from 
 import type { AdminCategory, CreateAdminCategoryInput } from '@domain/entities/AdminCategory'
 import type { AdminStore, CreateAdminStoreInput } from '@domain/entities/AdminStore'
 import type { AdminOrder } from '@domain/entities/AdminOrder'
+import { defaultStorefrontSettings, type StorefrontSettings } from '@domain/entities/StorefrontSettings'
 import { createAdminProductRepository } from '@infrastructure/factories/createAdminProductRepository'
 import { createAdminCategoryRepository } from '@infrastructure/factories/createAdminCategoryRepository'
 import { createAdminOrderRepository } from '@infrastructure/factories/createAdminOrderRepository'
 import { createAdminStoreRepository } from '@infrastructure/factories/createAdminStoreRepository'
+import { createStorefrontSettingsRepository } from '@infrastructure/factories/createStorefrontSettingsRepository'
 import { ListAdminProductsUseCase } from '@application/use-cases/ListAdminProductsUseCase'
 import { CreateAdminProductUseCase } from '@application/use-cases/CreateAdminProductUseCase'
 import { UpdateAdminProductUseCase } from '@application/use-cases/UpdateAdminProductUseCase'
+import { DeleteAdminProductUseCase } from '@application/use-cases/DeleteAdminProductUseCase'
 import { GetAdminProductOptionsUseCase } from '@application/use-cases/GetAdminProductOptionsUseCase'
 import { ListAdminCategoriesUseCase } from '@application/use-cases/ListAdminCategoriesUseCase'
 import { CreateAdminCategoryUseCase } from '@application/use-cases/CreateAdminCategoryUseCase'
 import { UpdateAdminCategoryUseCase } from '@application/use-cases/UpdateAdminCategoryUseCase'
+import { DeleteAdminCategoryUseCase } from '@application/use-cases/DeleteAdminCategoryUseCase'
 import { ListAdminOrdersUseCase } from '@application/use-cases/ListAdminOrdersUseCase'
 import { ListAdminStoresUseCase } from '@application/use-cases/ListAdminStoresUseCase'
 import { CreateAdminStoreUseCase } from '@application/use-cases/CreateAdminStoreUseCase'
 import { UpdateAdminStoreUseCase } from '@application/use-cases/UpdateAdminStoreUseCase'
+import { GetStorefrontSettingsUseCase } from '@application/use-cases/GetStorefrontSettingsUseCase'
+import { UpdateStorefrontSettingsUseCase } from '@application/use-cases/UpdateStorefrontSettingsUseCase'
 import { clearAdminAuthToken } from '@shared/utils/adminAuth'
 import {
   setLocalCheckoutOrderPaymentStatus,
@@ -51,8 +56,11 @@ import {
   updateOfferFromPrice,
 } from '@shared/utils/offerPricing'
 import { normalizeProductImages } from '@shared/utils/productImageNormalization'
+import { StorefrontSettingsEditor } from '@presentation/components/StorefrontSettingsEditor'
+import { CategoryImageManager } from '@presentation/components/CategoryImageManager'
+import { ProductImageManager } from '@presentation/components/ProductImageManager'
 
-type AdminSection = 'products' | 'categories' | 'stores' | 'orders'
+type AdminSection = 'products' | 'categories' | 'stores' | 'orders' | 'settings'
 type ModalTone = 'success' | 'error' | 'info'
 type ProductEditorMode = 'create' | 'update'
 type CategoryEditorMode = 'create' | 'update'
@@ -68,7 +76,7 @@ const defaultProductForm: CreateAdminProductInput = {
   description: '',
   category: '',
   categories: [],
-  imageUrl: 'https://picsum.photos/seed/admin-default/900/1200',
+  imageUrl: '',
   images: [],
   colors: [],
   sizes: [],
@@ -89,8 +97,6 @@ const defaultProductForm: CreateAdminProductInput = {
 
 const defaultCategoryForm: CreateAdminCategoryInput = {
   name: '',
-  slug: '',
-  description: '',
   active: true,
   parentId: undefined,
   imageUrl: undefined,
@@ -259,14 +265,12 @@ function isHttpImageReference(value: string | undefined): boolean {
 
 function normalizeCategoryPayload(payload: CreateAdminCategoryInput): CreateAdminCategoryInput {
   const normalizedName = payload.name.trim()
-  const normalizedSlugSource = payload.slug.trim().length > 0 ? payload.slug : normalizedName
   const normalizedImageUrl = payload.imageUrl?.trim()
 
   return {
     ...payload,
     name: normalizedName,
-    slug: normalizeSlug(normalizedSlugSource),
-    description: payload.description.trim(),
+    slug: normalizeSlug(normalizedName),
     parentId: payload.parentId || undefined,
     imageUrl: normalizedImageUrl || undefined,
   }
@@ -277,7 +281,7 @@ function validateCategoryPayload(payload: CreateAdminCategoryInput): { isValid: 
     return { isValid: false, message: 'El nombre de la categoria debe tener al menos 2 caracteres.' }
   }
 
-  if (!/^[a-z0-9ñ]+(?:-[a-z0-9ñ]+)*$/.test(payload.slug)) {
+  if (!payload.slug || !/^[a-z0-9ñ]+(?:-[a-z0-9ñ]+)*$/.test(payload.slug)) {
     return {
       isValid: false,
       message: 'El slug solo puede contener minusculas, numeros, ñ y guiones (ej. niños-y-niñas).',
@@ -402,6 +406,7 @@ type ProductFormErrorMap = {
   name?: string
   sku?: string
   category?: string
+  imageUrl?: string
   price?: string
   originalPrice?: string
   discountPercent?: string
@@ -448,6 +453,10 @@ function validateProductPayload(
 
   if (payload.category.trim().length < 2) {
     errors.category = 'Selecciona una categoria principal valida.'
+  }
+
+  if (!isHttpImageReference(payload.imageUrl)) {
+    errors.imageUrl = 'Selecciona una portada o ingresa una URL publica valida.'
   }
 
   if (!Number.isFinite(payload.price) || payload.price <= 0) {
@@ -594,6 +603,7 @@ function validateProductPayload(
     errors.name
     ?? errors.sku
     ?? errors.category
+    ?? errors.imageUrl
     ?? errors.price
     ?? errors.originalPrice
     ?? errors.discountPercent
@@ -650,6 +660,7 @@ export function AdminDashboardPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [stores, setStores] = useState<AdminStore[]>([])
   const [orders, setOrders] = useState<AdminOrder[]>([])
+  const [storefrontSettings, setStorefrontSettings] = useState<StorefrontSettings>(defaultStorefrontSettings)
   const [orderDetail, setOrderDetail] = useState<AdminOrder | null>(null)
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('active')
   const [orderReferenceFilter, setOrderReferenceFilter] = useState('')
@@ -703,6 +714,7 @@ export function AdminDashboardPage() {
   const categoryRepository = useMemo(() => createAdminCategoryRepository(), [])
   const storeRepository = useMemo(() => createAdminStoreRepository(), [])
   const orderRepository = useMemo(() => createAdminOrderRepository(), [])
+  const storefrontSettingsRepository = useMemo(() => createStorefrontSettingsRepository(true), [])
 
   const listAdminProductsUseCase = useMemo(() => new ListAdminProductsUseCase(productRepository), [productRepository])
   const getAdminProductOptionsUseCase = useMemo(
@@ -711,15 +723,25 @@ export function AdminDashboardPage() {
   )
   const createAdminProductUseCase = useMemo(() => new CreateAdminProductUseCase(productRepository), [productRepository])
   const updateAdminProductUseCase = useMemo(() => new UpdateAdminProductUseCase(productRepository), [productRepository])
+  const deleteAdminProductUseCase = useMemo(() => new DeleteAdminProductUseCase(productRepository), [productRepository])
 
   const listAdminCategoriesUseCase = useMemo(() => new ListAdminCategoriesUseCase(categoryRepository), [categoryRepository])
   const createAdminCategoryUseCase = useMemo(() => new CreateAdminCategoryUseCase(categoryRepository), [categoryRepository])
   const updateAdminCategoryUseCase = useMemo(() => new UpdateAdminCategoryUseCase(categoryRepository), [categoryRepository])
+  const deleteAdminCategoryUseCase = useMemo(() => new DeleteAdminCategoryUseCase(categoryRepository), [categoryRepository])
   const listAdminStoresUseCase = useMemo(() => new ListAdminStoresUseCase(storeRepository), [storeRepository])
   const createAdminStoreUseCase = useMemo(() => new CreateAdminStoreUseCase(storeRepository), [storeRepository])
   const updateAdminStoreUseCase = useMemo(() => new UpdateAdminStoreUseCase(storeRepository), [storeRepository])
 
   const listAdminOrdersUseCase = useMemo(() => new ListAdminOrdersUseCase(orderRepository), [orderRepository])
+  const getStorefrontSettingsUseCase = useMemo(
+    () => new GetStorefrontSettingsUseCase(storefrontSettingsRepository),
+    [storefrontSettingsRepository],
+  )
+  const updateStorefrontSettingsUseCase = useMemo(
+    () => new UpdateStorefrontSettingsUseCase(storefrontSettingsRepository),
+    [storefrontSettingsRepository],
+  )
 
   const activeProductsCount = useMemo(
     () => products.filter((product) => product.status === 'active').length,
@@ -756,7 +778,9 @@ export function AdminDashboardPage() {
     }
 
     return byStatus.filter((category) =>
-      [category.name, category.slug, category.description].some((value) => value.toLowerCase().includes(normalizedFilter)),
+      [category.name, category.slug, category.description].some((value) =>
+        value?.toLowerCase().includes(normalizedFilter),
+      ),
     )
   }, [categories, categoryReferenceFilter, categoryStatusFilter])
   const activeStoresCount = useMemo(
@@ -903,42 +927,19 @@ export function AdminDashboardPage() {
     setFeedback({ isOpen: true, tone, title, message })
   }
 
-  async function handleMainImageUpload(files: FileList | null) {
-    if (!files || files.length === 0) {
-      return
-    }
-
-    try {
-      const [dataUrl] = await normalizeProductImages(files)
-      if (!dataUrl) {
-        return
-      }
-
-      setProductForm((prev) => ({
-        ...prev,
-        imageUrl: dataUrl,
-      }))
-      openFeedback('info', 'Imagen principal normalizada', 'La imagen se recorto a 4:5 y se optimizo para subirla al guardar el producto.')
-    } catch {
-      openFeedback('error', 'Carga de imagen', 'No se pudo procesar la imagen principal seleccionada.')
+  async function handleMainImageUpload(file: File) {
+    const [dataUrl] = await normalizeProductImages([file])
+    if (dataUrl) {
+      setProductForm((prev) => ({ ...prev, imageUrl: dataUrl }))
     }
   }
 
-  async function handleGalleryImagesUpload(files: FileList | null) {
-    if (!files || files.length === 0) {
-      return
-    }
-
-    try {
-      const dataUrls = await normalizeProductImages(files)
-      setProductForm((prev) => ({
-        ...prev,
-        images: [...(prev.images ?? []), ...dataUrls],
-      }))
-      openFeedback('info', 'Galeria normalizada', `Se recortaron y optimizaron ${dataUrls.length} imagen(es) para subir al bucket.`)
-    } catch {
-      openFeedback('error', 'Carga de imagenes', 'No se pudieron procesar las imagenes de galeria seleccionadas.')
-    }
+  async function handleGalleryImagesUpload(files: File[]) {
+    const dataUrls = await normalizeProductImages(files)
+    setProductForm((prev) => ({
+      ...prev,
+      images: [...(prev.images ?? []), ...dataUrls],
+    }))
   }
 
   async function handleVariantImageUpload(index: number, files: FileList | null) {
@@ -964,21 +965,10 @@ export function AdminDashboardPage() {
     }
   }
 
-  async function handleCategoryImageUpload(files: FileList | null) {
-    if (!files || files.length === 0) {
-      return
-    }
-
-    try {
-      const [dataUrl] = await normalizeProductImages(files)
-      if (!dataUrl) {
-        return
-      }
-
+  async function handleCategoryImageUpload(file: File) {
+    const [dataUrl] = await normalizeProductImages([file])
+    if (dataUrl) {
       setCategoryForm((prev) => ({ ...prev, imageUrl: dataUrl }))
-      openFeedback('info', 'Imagen de categoria normalizada', 'La portada se recorto a 4:5 y se optimizo para subirla al guardar.')
-    } catch {
-      openFeedback('error', 'Carga de imagen', 'No se pudo procesar la imagen de categoria seleccionada.')
     }
   }
 
@@ -987,12 +977,13 @@ export function AdminDashboardPage() {
       setIsLoading(true)
       setErrorMessage('')
 
-      const [productsData, categoriesData, storesData, ordersData, productOptionsData] = await Promise.all([
+      const [productsData, categoriesData, storesData, ordersData, productOptionsData, settingsData] = await Promise.all([
         listAdminProductsUseCase.execute(),
         listAdminCategoriesUseCase.execute(),
         listAdminStoresUseCase.execute(),
         listAdminOrdersUseCase.execute(),
         getAdminProductOptionsUseCase.execute(),
+        getStorefrontSettingsUseCase.execute(),
       ])
 
       setProducts(productsData)
@@ -1000,6 +991,7 @@ export function AdminDashboardPage() {
       setStores(storesData)
       setOrders(ordersData)
       setProductOptions(productOptionsData)
+      setStorefrontSettings(settingsData)
     } catch (error) {
       if (isUnauthorizedError(error)) {
         forceLogin()
@@ -1017,9 +1009,33 @@ export function AdminDashboardPage() {
     listAdminCategoriesUseCase,
     listAdminOrdersUseCase,
     getAdminProductOptionsUseCase,
+    getStorefrontSettingsUseCase,
     listAdminProductsUseCase,
     listAdminStoresUseCase,
   ])
+
+  async function saveStorefrontSettings() {
+    try {
+      setIsSubmitting(true)
+      const updated = await updateStorefrontSettingsUseCase.execute(storefrontSettings)
+      const synchronizedOptions = await getAdminProductOptionsUseCase.execute()
+      setStorefrontSettings(updated)
+      setProductOptions({
+        ...synchronizedOptions,
+        colors: [...new Set([...updated.catalogOptions.colors, ...synchronizedOptions.colors])],
+        sizes: [...new Set([...updated.catalogOptions.sizes, ...synchronizedOptions.sizes])],
+      })
+      openFeedback('success', 'Configuracion guardada', 'El storefront y las opciones de producto quedaron actualizados.')
+    } catch (error) {
+      if (isUnauthorizedError(error)) {
+        forceLogin()
+        return
+      }
+      openFeedback('error', 'Configuracion no guardada', 'Revisa los campos e intenta nuevamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -1138,7 +1154,6 @@ export function AdminDashboardPage() {
     setCategoryForm({
       name: category.name,
       slug: category.slug,
-      description: category.description,
       active: category.active,
       parentId: category.parentId,
       imageUrl: category.imageUrl,
@@ -1300,13 +1315,19 @@ export function AdminDashboardPage() {
           return
         }
 
-        await updateAdminProductUseCase.execute({
-          ...product,
-          status: 'inactive',
-        })
+        if (product.status === 'inactive') {
+          await deleteAdminProductUseCase.execute(product.id)
+          setProducts((prev) => prev.filter((entry) => entry.id !== product.id))
+          openFeedback('success', 'Producto eliminado', 'El producto inactivo fue eliminado definitivamente.')
+        } else {
+          await updateAdminProductUseCase.execute({
+            ...product,
+            status: 'inactive',
+          })
 
-        setProducts((prev) => prev.map((entry) => (entry.id === product.id ? { ...entry, status: 'inactive' } : entry)))
-        openFeedback('success', 'Producto eliminado', 'El producto fue marcado como inactivo.')
+          setProducts((prev) => prev.map((entry) => (entry.id === product.id ? { ...entry, status: 'inactive' } : entry)))
+          openFeedback('success', 'Producto desactivado', 'El producto fue marcado como inactivo.')
+        }
       }
 
       if (confirmDelete.entity === 'category') {
@@ -1317,17 +1338,27 @@ export function AdminDashboardPage() {
           return
         }
 
-        const updated = await updateAdminCategoryUseCase.execute({
-          ...category,
-          active: false,
-        })
+        if (!category.active) {
+          await deleteAdminCategoryUseCase.execute(category.id)
+          setCategories((prev) => prev.filter((entry) => entry.id !== category.id))
+          setProductOptions((prev) => ({
+            ...prev,
+            categories: prev.categories.filter((entry) => entry.id !== category.id),
+          }))
+          openFeedback('success', 'Categoria eliminada', 'La categoria inactiva fue eliminada definitivamente.')
+        } else {
+          const updated = await updateAdminCategoryUseCase.execute({
+            ...category,
+            active: false,
+          })
 
-        setCategories((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)))
-        setProductOptions((prev) => ({
-          ...prev,
-          categories: prev.categories.map((entry) => (entry.id === updated.id ? updated : entry)),
-        }))
-        openFeedback('success', 'Categoria oculta', 'La categoria dejo de mostrarse en el storefront.')
+          setCategories((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)))
+          setProductOptions((prev) => ({
+            ...prev,
+            categories: prev.categories.map((entry) => (entry.id === updated.id ? updated : entry)),
+          }))
+          openFeedback('success', 'Categoria oculta', 'La categoria dejo de mostrarse en el storefront.')
+        }
       }
 
       if (confirmDelete.entity === 'store') {
@@ -1692,7 +1723,7 @@ export function AdminDashboardPage() {
                         _hover={{ bg: '#991b1b' }}
                         onClick={() => setConfirmDelete({ isOpen: true, entity: 'product', id: product.id })}
                       >
-                        Eliminar
+                        {product.status === 'inactive' ? 'Eliminar' : 'Desactivar'}
                       </Button>
                     </HStack>
                   </Box>
@@ -1824,16 +1855,27 @@ export function AdminDashboardPage() {
                           Ocultar
                         </Button>
                       ) : (
-                        <Button
-                          size="xs"
-                          bg="#0f766e"
-                          color="white"
-                          _hover={{ bg: '#115e59' }}
-                          loading={isSubmitting}
-                          onClick={() => void showCategory(category)}
-                        >
-                          Mostrar
-                        </Button>
+                        <>
+                          <Button
+                            size="xs"
+                            bg="#0f766e"
+                            color="white"
+                            _hover={{ bg: '#115e59' }}
+                            loading={isSubmitting}
+                            onClick={() => void showCategory(category)}
+                          >
+                            Mostrar
+                          </Button>
+                          <Button
+                            size="xs"
+                            bg="#b91c1c"
+                            color="white"
+                            _hover={{ bg: '#991b1b' }}
+                            onClick={() => setConfirmDelete({ isOpen: true, entity: 'category', id: category.id })}
+                          >
+                            Eliminar
+                          </Button>
+                        </>
                       )}
                     </HStack>
                   </Box>
@@ -2080,6 +2122,7 @@ export function AdminDashboardPage() {
                 {renderSidebarButton('categories', 'Categorias')}
                 {renderSidebarButton('stores', 'Tiendas')}
                 {renderSidebarButton('orders', 'Ordenes')}
+                {renderSidebarButton('settings', 'Configuracion')}
               </VStack>
             </Box>
 
@@ -2088,6 +2131,14 @@ export function AdminDashboardPage() {
               {section === 'categories' ? renderCategoriesTable() : null}
               {section === 'stores' ? renderStoresTable() : null}
               {section === 'orders' ? renderOrdersTable() : null}
+              {section === 'settings' ? (
+                <StorefrontSettingsEditor
+                  settings={storefrontSettings}
+                  isSaving={isSubmitting}
+                  onChange={setStorefrontSettings}
+                  onSave={() => void saveStorefrontSettings()}
+                />
+              ) : null}
             </Box>
           </Flex>
         </VStack>
@@ -2225,141 +2276,17 @@ export function AdminDashboardPage() {
             />
           </FormField>
 
-          <FormField label="Imagen principal (URL)">
-            <VStack align="stretch" gap={2}>
-              <Input
-                placeholder="https://..."
-                value={productForm.imageUrl}
-                onChange={(event) => setProductForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
-              />
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(event) => {
-                  void handleMainImageUpload(event.target.files)
-                  event.target.value = ''
-                }}
-              />
-              <Text fontSize="xs" color="#64748b">
-                Los archivos se recortan al centro en formato 4:5 y se optimizan como WebP.
-              </Text>
-              {isHttpImageReference(productForm.imageUrl) ? (
-                <Box border="1px solid" borderColor="#e2e8f0" borderRadius="lg" p={2} bg="#f8fafc">
-                  <VStack align="stretch" gap={2}>
-                    <img
-                      src={productForm.imageUrl}
-                      alt="Preview imagen principal"
-                      style={{
-                        width: '100%',
-                        maxHeight: '220px',
-                        objectFit: 'contain',
-                        borderRadius: '8px',
-                        background: 'white',
-                      }}
-                    />
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      borderColor="#cbd5e1"
-                      onClick={() =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          imageUrl: '',
-                        }))
-                      }
-                    >
-                      Quitar imagen principal
-                    </Button>
-                  </VStack>
-                </Box>
-              ) : null}
-            </VStack>
-          </FormField>
+          <ProductImageManager
+            imageUrl={productForm.imageUrl}
+            images={productForm.images ?? []}
+            productName={productForm.name}
+            onMainImageChange={(imageUrl) => setProductForm((prev) => ({ ...prev, imageUrl }))}
+            onGalleryChange={(images) => setProductForm((prev) => ({ ...prev, images }))}
+            onMainFileSelect={handleMainImageUpload}
+            onGalleryFilesSelect={handleGalleryImagesUpload}
+          />
 
           <HStack gap={3} align="stretch" flexWrap="wrap">
-            <FormField label="Galeria de imagenes" helper="Separa las URLs con coma.">
-              <VStack align="stretch" gap={2}>
-                <Input
-                  placeholder="https://img1..., https://img2..."
-                  value={(productForm.images ?? []).join(', ')}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({
-                      ...prev,
-                      images: parseCommaSeparatedValue(event.target.value),
-                    }))
-                  }
-                />
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(event) => {
-                    void handleGalleryImagesUpload(event.target.files)
-                    event.target.value = ''
-                  }}
-                />
-                <Text fontSize="xs" color="#64748b">
-                  Las imagenes se recortan al centro en formato 4:5 y se optimizan como WebP.
-                </Text>
-                {(productForm.images ?? []).length > 0 ? (
-                  <VStack align="stretch" gap={2}>
-                    {(productForm.images ?? []).map((imageRef, imageIndex) => (
-                      <Box
-                        key={`gallery-preview-${imageIndex}`}
-                        border="1px solid"
-                        borderColor="#e2e8f0"
-                        borderRadius="lg"
-                        p={2}
-                        bg="#f8fafc"
-                      >
-                        <HStack align="start" gap={2}>
-                          {isHttpImageReference(imageRef) ? (
-                            <img
-                              src={imageRef}
-                              alt={`Preview galeria ${imageIndex + 1}`}
-                              style={{
-                                width: '84px',
-                                height: '84px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                background: 'white',
-                              }}
-                            />
-                          ) : null}
-                          <VStack align="stretch" flex="1" gap={1}>
-                            <Text
-                              fontSize="xs"
-                              color="#334155"
-                              style={{
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              {imageRef}
-                            </Text>
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              borderColor="#cbd5e1"
-                              onClick={() =>
-                                setProductForm((prev) => ({
-                                  ...prev,
-                                  images: (prev.images ?? []).filter((_, currentIndex) => currentIndex !== imageIndex),
-                                }))
-                              }
-                            >
-                              Quitar
-                            </Button>
-                          </VStack>
-                        </HStack>
-                      </Box>
-                    ))}
-                  </VStack>
-                ) : null}
-              </VStack>
-            </FormField>
             <FormField label="Colores" helper="Selecciona uno o varios colores.">
               <select
                 multiple
@@ -3330,24 +3257,11 @@ export function AdminDashboardPage() {
         onClose={() => setCategoryEditor({ isOpen: false, mode: 'create', categoryId: null })}
       >
         <VStack align="stretch" gap={3}>
-          <HStack gap={3} align="stretch" flexWrap="wrap">
-            <FormField label="Nombre de categoria">
-              <Input placeholder="Ej. Camisas" value={categoryForm.name} onChange={(event) => setCategoryForm((prev) => ({ ...prev, name: event.target.value }))} />
-            </FormField>
-            <FormField label="Slug">
-              <Input
-                placeholder="Ej. camisas"
-                value={categoryForm.slug}
-                onChange={(event) => setCategoryForm((prev) => ({ ...prev, slug: normalizeSlug(event.target.value) }))}
-              />
-            </FormField>
-          </HStack>
-
-          <FormField label="Descripcion">
+          <FormField label="Nombre de categoria" helper={`Slug automatico: ${normalizeSlug(categoryForm.name) || 'se genera desde el nombre'}`}>
             <Input
-              placeholder="Describe la categoria"
-              value={categoryForm.description}
-              onChange={(event) => setCategoryForm((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Ej. Camisas para niños"
+              value={categoryForm.name}
+              onChange={(event) => setCategoryForm((prev) => ({ ...prev, name: event.target.value }))}
             />
           </FormField>
 
@@ -3376,40 +3290,13 @@ export function AdminDashboardPage() {
             </select>
           </FormField>
 
-          <FormField
-            label="Imagen de categoria"
-            helper="Obligatoria para categorias especificas. Los archivos se recortan a 4:5 y se convierten a WebP."
-          >
-            <VStack align="stretch" gap={2}>
-              <Input
-                placeholder="https://..."
-                value={categoryForm.imageUrl ?? ''}
-                onChange={(event) =>
-                  setCategoryForm((prev) => ({
-                    ...prev,
-                    imageUrl: event.target.value || undefined,
-                  }))
-                }
-              />
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(event) => void handleCategoryImageUpload(event.target.files)}
-              />
-              {isHttpImageReference(categoryForm.imageUrl) ? (
-                <Image
-                  src={categoryForm.imageUrl}
-                  alt="Vista previa de categoria"
-                  width="120px"
-                  aspectRatio="4 / 5"
-                  objectFit="cover"
-                  borderRadius="md"
-                  border="1px solid"
-                  borderColor="#cbd5e1"
-                />
-              ) : null}
-            </VStack>
-          </FormField>
+          <CategoryImageManager
+            imageUrl={categoryForm.imageUrl}
+            categoryName={categoryForm.name}
+            isRequired={Boolean(categoryForm.parentId)}
+            onChange={(imageUrl) => setCategoryForm((prev) => ({ ...prev, imageUrl }))}
+            onFileSelect={handleCategoryImageUpload}
+          />
 
           <FormField label="Estado de categoria">
           <HStack>
@@ -3674,22 +3561,26 @@ export function AdminDashboardPage() {
 
       <ModalShell
         isOpen={Boolean(confirmDelete?.isOpen)}
-        title={confirmDelete?.entity === 'category' ? 'Confirmar ocultamiento' : 'Confirmar eliminacion'}
+        title="Confirmar accion"
         onClose={() => setConfirmDelete(null)}
       >
         <VStack align="stretch" gap={4}>
           <Text color="#334155">
             {confirmDelete?.entity === 'product'
-              ? 'Vas a eliminar este producto (se marcara como inactivo).'
+              ? products.find((product) => product.id === confirmDelete.id)?.status === 'inactive'
+                ? 'Vas a eliminar definitivamente este producto inactivo.'
+                : 'Vas a desactivar este producto. Luego podras eliminarlo desde el filtro Inactivos.'
               : confirmDelete?.entity === 'category'
-                ? 'La categoria dejara de mostrarse en el carrusel y en la vista de categorias. Podras volver a mostrarla desde el filtro Inactivas.'
+                ? categories.find((category) => category.id === confirmDelete.id)?.active
+                  ? 'La categoria dejara de mostrarse en el storefront. Podras volver a mostrarla desde el filtro Inactivas.'
+                  : 'Vas a eliminar definitivamente esta categoria inactiva.'
                 : confirmDelete?.entity === 'store'
                   ? 'Vas a eliminar esta tienda (se desactivara).'
                   : 'Vas a eliminar esta orden del listado.' }
           </Text>
           <HStack>
             <Button bg="#b91c1c" color="white" _hover={{ bg: '#991b1b' }} loading={isSubmitting} onClick={() => void handleDelete()}>
-              {confirmDelete?.entity === 'category' ? 'Ocultar categoria' : 'Confirmar'}
+              Confirmar
             </Button>
             <Button variant="outline" borderColor="#cbd5e1" onClick={() => setConfirmDelete(null)}>
               Cancelar

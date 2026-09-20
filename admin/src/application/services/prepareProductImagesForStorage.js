@@ -9,10 +9,11 @@ const sanitizeSegment = (value, fallback) => {
   return normalized.length > 0 ? normalized : fallback;
 };
 
-const buildProductImageKeyPrefix = (payload) => {
+const buildProductImageKeyPrefix = (payload, productId) => {
+  const idSegment = sanitizeSegment(productId, 'unassigned');
   const skuSegment = sanitizeSegment(payload.sku, 'no-sku');
   const nameSegment = sanitizeSegment(payload.name, 'product');
-  return `products/${skuSegment}-${nameSegment}`;
+  return `products/${idSegment}/${skuSegment}-${nameSegment}`;
 };
 
 const resolveImageReference = async ({ imageReference, fileNameHint, keyPrefix, productImageStorage }) => {
@@ -32,12 +33,12 @@ const resolveImageReference = async ({ imageReference, fileNameHint, keyPrefix, 
   });
 };
 
-export const prepareProductImagesForStorage = async ({ payload, productImageStorage }) => {
+export const prepareProductImagesForStorage = async ({ payload, productId, productImageStorage }) => {
   if (!productImageStorage || typeof productImageStorage.uploadDataUrl !== 'function') {
     return payload;
   }
 
-  const keyPrefix = buildProductImageKeyPrefix(payload);
+  const keyPrefix = buildProductImageKeyPrefix(payload, productId);
 
   const imageUrl = await resolveImageReference({
     imageReference: payload.imageUrl,

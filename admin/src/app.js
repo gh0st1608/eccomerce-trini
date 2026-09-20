@@ -16,6 +16,10 @@ import { createCategoryRouter } from './infrastructure/routes/category.routes.js
 import { createPublicCategoryRouter } from './infrastructure/routes/public-category.routes.js';
 import { createStoreRouter } from './infrastructure/routes/store.routes.js';
 import { createPublicStoreRouter } from './infrastructure/routes/public-store.routes.js';
+import {
+  createPublicStorefrontSettingsRouter,
+  createStorefrontSettingsRouter,
+} from './infrastructure/routes/storefront-settings.routes.js';
 import { createAuthRouter } from './infrastructure/routes/auth.routes.js';
 import { createHealthRouter } from './infrastructure/routes/health.routes.js';
 import { adminAuthMiddleware } from './infrastructure/middlewares/admin-auth.middleware.js';
@@ -87,6 +91,13 @@ export const createApp = ({ logger, controllers }) => {
   );
   app.use(
     '/api/v1/admin',
+    publicReadAuthMiddleware,
+    createPublicStorefrontSettingsRouter({
+      storefrontSettingsController: controllers.storefrontSettingsController,
+    }),
+  );
+  app.use(
+    '/api/v1/admin',
     adminAuthMiddleware,
     createProductRouter({ productController: controllers.productController }),
   );
@@ -104,6 +115,13 @@ export const createApp = ({ logger, controllers }) => {
     '/api/v1/admin',
     adminAuthMiddleware,
     createStoreRouter({ storeController: controllers.storeController }),
+  );
+  app.use(
+    '/api/v1/admin',
+    adminAuthMiddleware,
+    createStorefrontSettingsRouter({
+      storefrontSettingsController: controllers.storefrontSettingsController,
+    }),
   );
   app.use('/', createHealthRouter());
 
