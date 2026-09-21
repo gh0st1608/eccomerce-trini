@@ -58,6 +58,12 @@ const productVariantSchema = z.object({
   prices: z.array(productPriceSchema).max(20).optional().default([]),
 });
 
+const productColorOptionSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  hex: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a 6-digit hex color'),
+  images: z.array(imageReferenceSchema).min(1).max(12),
+});
+
 export const createProductSchema = z.object({
   name: z.string().min(3),
   sku: z.string().min(3),
@@ -67,6 +73,7 @@ export const createProductSchema = z.object({
   imageUrl: imageReferenceSchema.optional().default('https://picsum.photos/900/1200'),
   images: z.array(imageReferenceSchema).optional(),
   colors: z.array(z.string().min(1)).optional(),
+  colorOptions: z.array(productColorOptionSchema).max(30).optional().default([]),
   sizes: z.array(z.string().min(1)).optional(),
   price: z.number().positive(),
   originalPrice: z.number().positive().optional(),

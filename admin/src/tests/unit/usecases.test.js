@@ -106,6 +106,7 @@ describe('UseCases', () => {
       .fn()
       .mockResolvedValueOnce('https://cdn.example.com/products/main.jpg')
       .mockResolvedValueOnce('https://cdn.example.com/products/gallery.jpg')
+      .mockResolvedValueOnce('https://cdn.example.com/products/black-front.jpg')
       .mockResolvedValueOnce('https://cdn.example.com/products/variant.jpg');
 
     const useCase = new CreateProductUseCase({
@@ -120,6 +121,7 @@ describe('UseCases', () => {
       category: 'polos',
       imageUrl: pngDataUrl,
       images: [pngDataUrl],
+      colorOptions: [{ name: 'Negro', hex: '#111827', images: [pngDataUrl] }],
       variants: [{ sku: 'PL-TECH-01-BLK', imageUrl: pngDataUrl }],
       price: 10,
       currency: 'PEN',
@@ -128,7 +130,7 @@ describe('UseCases', () => {
       status: 'active',
     });
 
-    expect(uploadDataUrl).toHaveBeenCalledTimes(3);
+    expect(uploadDataUrl).toHaveBeenCalledTimes(4);
     const createdPayload = create.mock.calls[0][0];
     expect(createdPayload.id).toMatch(/^[0-9a-f-]{36}$/);
     const expectedKeyPrefix = `products/${createdPayload.id}/pl-tech-01-polo-tech`;
@@ -145,12 +147,22 @@ describe('UseCases', () => {
     expect(uploadDataUrl).toHaveBeenNthCalledWith(3, {
       dataUrl: pngDataUrl,
       keyPrefix: expectedKeyPrefix,
+      fileNameHint: 'color-1-negro-1',
+    });
+    expect(uploadDataUrl).toHaveBeenNthCalledWith(4, {
+      dataUrl: pngDataUrl,
+      keyPrefix: expectedKeyPrefix,
       fileNameHint: 'variant-1-PL-TECH-01-BLK',
     });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         imageUrl: 'https://cdn.example.com/products/main.jpg',
         images: ['https://cdn.example.com/products/gallery.jpg'],
+        colorOptions: [{
+          name: 'Negro',
+          hex: '#111827',
+          images: ['https://cdn.example.com/products/black-front.jpg'],
+        }],
       }),
     );
     expect(create.mock.calls[0][0].variants[0].imageUrl).toBe(

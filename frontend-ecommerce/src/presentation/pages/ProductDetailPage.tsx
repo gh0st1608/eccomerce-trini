@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Badge,
@@ -23,7 +23,8 @@ import { MobileBottomNav } from '@presentation/components/MobileBottomNav'
 import { StoreHeader } from '@presentation/components/StoreHeader'
 import { useCart } from '@presentation/providers/cart-context'
 import { formatCurrency } from '@shared/utils/currency'
-import { getProductGalleryImages } from '@shared/utils/productGallery'
+import { getProductGalleryItems } from '@shared/utils/productGallery'
+import { isPatternColor, resolveProductColorHex } from '@shared/utils/productColor'
 
 export function ProductDetailPage() {
   const navigate = useNavigate()
@@ -36,6 +37,8 @@ export function ProductDetailPage() {
   const [selectedColor, setSelectedColor] = useState('')
   const [selectedSize, setSelectedSize] = useState('')
   const [selectedQuantity, setSelectedQuantity] = useState(1)
+  const mobileGalleryRef = useRef<HTMLDivElement>(null)
+  const pendingGalleryIndexRef = useRef<number | null>(null)
 
   const getProductByIdUseCase = useMemo(() => {
     const repository = createProductRepository()
@@ -51,13 +54,36 @@ export function ProductDetailPage() {
       .filter((item) => item.product.id === productId)
       .reduce((sum, item) => sum + item.quantity, 0)
   }, [cartItemsList, productId])
-  const galleryImages = useMemo(() => {
+  const galleryItems = useMemo(() => {
     if (!product) {
       return []
     }
 
-    return getProductGalleryImages(product)
+    return getProductGalleryItems(product)
   }, [product])
+  const galleryImages = galleryItems.map((item) => item.imageUrl)
+
+  function selectGalleryImage(index: number) {
+    setSelectedImageIndex(index)
+    setSelectedColor(galleryItems[index]?.color ?? '')
+  }
+
+  function selectColor(color: string) {
+    const colorImageIndex = galleryItems.findIndex((item) => item.color === color)
+
+    setSelectedColor(color)
+    if (colorImageIndex >= 0) {
+      setSelectedImageIndex(colorImageIndex)
+      const mobileGallery = mobileGalleryRef.current
+      if (mobileGallery && mobileGallery.clientWidth > 0 && mobileGallery.scrollTo) {
+        pendingGalleryIndexRef.current = colorImageIndex
+        mobileGallery.scrollTo({
+        left: colorImageIndex * mobileGallery.clientWidth,
+        behavior: 'smooth',
+      })
+      }
+    }
+  }
 
   const hasColorOptions = Boolean(product?.colors?.length)
   const hasSizeOptions = Boolean(product?.sizes?.length)
@@ -190,11 +216,30 @@ export function ProductDetailPage() {
                     borderRadius="xl"
                   >
                     <Flex
+                      ref={mobileGalleryRef}
                       aria-label={`Galeria de ${product.name}`}
                       overflowX="auto"
                       scrollSnapType="x mandatory"
                       overscrollBehaviorX="contain"
                       scrollbarWidth="none"
+                      onScroll={(event) => {
+                        const gallery = event.currentTarget
+                        if (gallery.clientWidth === 0) return
+
+                        const visibleImageIndex = Math.round(gallery.scrollLeft / gallery.clientWidth)
+                        const pendingGalleryIndex = pendingGalleryIndexRef.current
+                        if (pendingGalleryIndex !== null) {
+                          if (visibleImageIndex === pendingGalleryIndex) {
+                            pendingGalleryIndexRef.current = null
+                          } else {
+                            return
+                          }
+                        }
+
+                        if (visibleImageIndex !== selectedImageIndex) {
+                          selectGalleryImage(visibleImageIndex)
+                        }
+                      }}
                     >
                       {galleryImages.map((imageUrl, index) => (
                         <Image
@@ -247,7 +292,7 @@ export function ProductDetailPage() {
                             overflow="hidden"
                             borderRadius="xl"
                             bg="white"
-                            onClick={() => setSelectedImageIndex(index)}
+                            onClick={() => selectGalleryImage(index)}
                           >
                             <Image
                               src={imageUrl}
@@ -349,22 +394,54 @@ export function ProductDetailPage() {
 
                     {hasColorOptions ? (
                       <VStack align="stretch" gap={2}>
-                        <Text color="#334155" fontWeight="semibold">
-                          Color
-                        </Text>
-                        <HStack gap={2} flexWrap="wrap">
+                        <HStack gap={2} align="baseline">
+                          <Text color="#334155" fontWeight="semibold">Color</Text>
+                          <Text color="#64748b" fontSize="sm">
+                            {selectedColor || 'Selecciona un color'}
+                          </Text>
+                        </HStack>
+                        <HStack gap={3} flexWrap="wrap" role="group" aria-label="Colores disponibles">
                           {product.colors?.map((color) => (
+                            (() => {
+                              const colorOption = product.colorOptions?.find((option) => option.name === color)
+                              const patternImage = isPatternColor(color) ? colorOption?.images[0] : undefined
+
+                              return (
                             <Button
                               key={color}
-                              size="sm"
-                              variant={selectedColor === color ? 'solid' : 'outline'}
-                              bg={selectedColor === color ? '#0f766e' : 'white'}
-                              color={selectedColor === color ? 'white' : '#0f172a'}
-                              borderColor="#cbd5e1"
-                              onClick={() => setSelectedColor(color)}
+                              aria-label={color}
+                              aria-pressed={selectedColor === color}
+                              title={color}
+                              minW="44px"
+                              width="44px"
+                              height="44px"
+                              p="5px"
+                              borderRadius="full"
+                              bg="white"
+                              border="2px solid"
+                              borderColor={selectedColor === color ? '#0f172a' : '#cbd5e1'}
+                              boxShadow={selectedColor === color ? '0 0 0 3px white, 0 0 0 5px #0f766e' : 'sm'}
+                              _hover={{ transform: 'scale(1.06)', borderColor: '#64748b' }}
+                              transition="transform 140ms ease, box-shadow 140ms ease"
+                              onClick={() => selectColor(color)}
                             >
-                              {color}
+                              <Box
+                                width="100%"
+                                height="100%"
+                                borderRadius="full"
+                                bg={resolveProductColorHex(
+                                  color,
+                                  colorOption?.hex,
+                                )}
+                                bgImage={patternImage ? `url(${patternImage})` : undefined}
+                                bgSize="cover"
+                                backgroundPosition="center"
+                                border="1px solid"
+                                borderColor="blackAlpha.300"
+                              />
                             </Button>
+                              )
+                            })()
                           ))}
                         </HStack>
                       </VStack>
@@ -461,7 +538,10 @@ export function ProductDetailPage() {
                       _hover={{ bg: '#115e59' }}
                       disabled={!selectedOptionsAreValid || isSoldOut}
                       onClick={() =>
-                        addToCart(product, selectedQuantity, {
+                        addToCart({
+                          ...product,
+                          imageUrl: galleryImages[0] ?? product.imageUrl,
+                        }, selectedQuantity, {
                           color: selectedColor,
                           size: selectedSize,
                         })

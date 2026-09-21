@@ -31,6 +31,7 @@ function mapProductDtoToDomain(dto: AdminProductDto): AdminProduct {
     categories: parsed.categories,
     imageUrl: parsed.imageUrl ?? parsed.images?.[0] ?? '',
     images: parsed.images,
+    colorOptions: parsed.colorOptions,
     colors: parsed.colors,
     sizes: parsed.sizes,
     productType: parsed.productType,

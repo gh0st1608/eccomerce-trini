@@ -47,6 +47,22 @@ describe('productCatalogRules', () => {
       expect(normalized.productType).toBe('variable');
     });
 
+    test('derives colors from color-specific galleries', () => {
+      const normalized = normalizeProductRecord({
+        id: 'p-color',
+        name: 'Vestido',
+        colorOptions: [
+          { name: 'Vino', hex: '#722f37', images: ['https://img/vino.jpg'] },
+        ],
+        price: 100,
+      });
+
+      expect(normalized.colors).toEqual(['Vino']);
+      expect(normalized.colorOptions).toEqual([
+        { name: 'Vino', hex: '#722f37', images: ['https://img/vino.jpg'] },
+      ]);
+    });
+
     test('keeps explicit attributes and inventory when already present', () => {
       const normalized = normalizeProductRecord({
         id: 'p3',

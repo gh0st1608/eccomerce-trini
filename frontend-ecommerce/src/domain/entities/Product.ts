@@ -15,6 +15,12 @@ export interface ProductInventory {
   inStock?: boolean
 }
 
+export interface ProductColorOption {
+  name: string
+  hex: string
+  images: string[]
+}
+
 export interface ProductVariant {
   id?: string
   sku?: string
@@ -42,6 +48,7 @@ export interface Product {
   categories?: string[]
   imageUrl: string
   images?: string[]
+  colorOptions?: ProductColorOption[]
   colors?: string[]
   sizes?: string[]
   productType?: 'simple' | 'variable'

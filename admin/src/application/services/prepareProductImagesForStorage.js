@@ -33,6 +33,22 @@ const resolveImageReference = async ({ imageReference, fileNameHint, keyPrefix, 
   });
 };
 
+const prepareColorOptions = ({ colorOptions = [], keyPrefix, productImageStorage }) =>
+  Promise.all(
+    colorOptions.map(async (colorOption, colorIndex) => ({
+      ...colorOption,
+      images: await Promise.all(
+        colorOption.images.map((imageReference, imageIndex) =>
+          resolveImageReference({
+            imageReference,
+            fileNameHint: `color-${colorIndex + 1}-${sanitizeSegment(colorOption.name, 'color')}-${imageIndex + 1}`,
+            keyPrefix,
+            productImageStorage,
+          })),
+      ),
+    })),
+  );
+
 export const prepareProductImagesForStorage = async ({ payload, productId, productImageStorage }) => {
   if (!productImageStorage || typeof productImageStorage.uploadDataUrl !== 'function') {
     return payload;
@@ -57,6 +73,12 @@ export const prepareProductImagesForStorage = async ({ payload, productId, produ
       })),
   );
 
+  const colorOptions = await prepareColorOptions({
+    colorOptions: payload.colorOptions,
+    keyPrefix,
+    productImageStorage,
+  });
+
   const variants = await Promise.all(
     (payload.variants ?? []).map(async (variant, index) => ({
       ...variant,
@@ -73,6 +95,7 @@ export const prepareProductImagesForStorage = async ({ payload, productId, produ
     ...payload,
     imageUrl,
     images,
+    colorOptions,
     variants,
   };
 };

@@ -16,6 +16,21 @@ const MOCK_PRODUCTS: Product[] = [
       'https://images.unsplash.com/photo-1539533018447-63fcce2678e4?auto=format&fit=crop&w=900&q=80',
       'https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=80',
     ],
+    colorOptions: [
+      {
+        name: 'Gris',
+        hex: '#94a3b8',
+        images: [
+          'https://images.unsplash.com/photo-1484515991647-c5760fcecfc7?auto=format&fit=crop&w=900&q=80',
+          'https://images.unsplash.com/photo-1539533018447-63fcce2678e4?auto=format&fit=crop&w=900&q=80',
+        ],
+      },
+      {
+        name: 'Negro',
+        hex: '#111827',
+        images: ['https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=900&q=80'],
+      },
+    ],
     colors: ['Gris', 'Negro', 'Azul marino'],
     sizes: ['S', 'M', 'L', 'XL'],
     productType: 'variable',

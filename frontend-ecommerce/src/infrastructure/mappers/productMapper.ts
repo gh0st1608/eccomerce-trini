@@ -26,6 +26,7 @@ export function mapProductDtoToDomain(productDto: ProductDto): Product {
     categories: dto.categories,
     imageUrl: derivedImageUrl,
     images: dto.images,
+    colorOptions: dto.colorOptions,
     colors: dto.colors,
     sizes: dto.sizes,
     productType: dto.productType,

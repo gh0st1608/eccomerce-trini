@@ -55,6 +55,8 @@ import { normalizeProductImages } from '@shared/utils/productImageNormalization'
 import { StorefrontSettingsEditor } from '@presentation/components/StorefrontSettingsEditor'
 import { CategoryImageManager } from '@presentation/components/CategoryImageManager'
 import { ProductImageManager } from '@presentation/components/ProductImageManager'
+import { ProductColorImageManager } from '@presentation/components/ProductColorImageManager'
+import { resolveProductColorHex } from '@shared/utils/productColor'
 
 type AdminSection = 'products' | 'categories' | 'stores' | 'orders' | 'settings'
 type ModalTone = 'success' | 'error' | 'info'
@@ -131,6 +133,7 @@ const defaultProductForm: CreateAdminProductInput = {
   categories: [],
   imageUrl: '',
   images: [],
+  colorOptions: [],
   colors: [],
   sizes: [],
   productType: 'simple',
@@ -380,6 +383,12 @@ function normalizeProductPayload(payload: CreateAdminProductInput): CreateAdminP
     inStock: payload.inventory?.inStock ?? Number(payload.inventory?.quantity ?? payload.stock ?? 0) > 0,
   }
 
+  const normalizedColorOptions = (payload.colorOptions ?? []).map((option) => ({
+    name: option.name.trim(),
+    hex: option.hex.toLowerCase(),
+    images: [...new Set(option.images.map((image) => image.trim()).filter(Boolean))],
+  }))
+
   const normalizedVariants = (payload.variants ?? [])
     .map((variant) => {
       const firstPrice = variant.prices?.[0]
@@ -436,6 +445,7 @@ function normalizeProductPayload(payload: CreateAdminProductInput): CreateAdminP
     attributes: normalizedAttributes,
     prices: normalizedPrices,
     inventory: normalizedInventory,
+    colorOptions: normalizedColorOptions,
     variants: normalizedVariants,
     storeAvailability: normalizedStoreAvailability,
     price: typeof payload.price === 'number' && Number.isFinite(payload.price)
@@ -469,6 +479,7 @@ type ProductFormErrorMap = {
   prices?: string
   variants?: string
   storeAvailability?: string
+  colorOptions?: string
   attributesByIndex?: Record<number, string>
   pricesByIndex?: Record<number, string>
   variantsByIndex?: Record<number, string>
@@ -483,6 +494,7 @@ type ProductValidationResult = {
 function validateProductPayload(
   payload: CreateAdminProductInput,
   isProductOnOffer = false,
+  requireColorImages = false,
 ): ProductValidationResult {
   const errors: ProductFormErrorMap = {}
   const setIndexedError = (
@@ -510,6 +522,19 @@ function validateProductPayload(
 
   if (!isHttpImageReference(payload.imageUrl)) {
     errors.imageUrl = 'Selecciona una portada o ingresa una URL publica valida.'
+  }
+
+
+  const colorOptionsByName = new Map(
+    (payload.colorOptions ?? []).map((option) => [option.name, option]),
+  )
+  if (
+    (payload.colorOptions ?? []).some((option) => option.images.length === 0)
+    || (requireColorImages && (payload.colors ?? []).some(
+      (color) => !colorOptionsByName.get(color)?.images.length,
+    ))
+  ) {
+    errors.colorOptions = 'Cada color configurado necesita al menos una imagen.'
   }
 
   if (!Number.isFinite(payload.price) || payload.price <= 0) {
@@ -1044,6 +1069,27 @@ export function AdminDashboardPage() {
     }))
   }
 
+  async function handleColorImagesUpload(color: string, files: File[]) {
+    if (files.length === 0) return
+
+    const dataUrls = await normalizeProductImages(files)
+    setProductForm((prev) => {
+      const existingOption = prev.colorOptions?.find((option) => option.name === color)
+      const nextOption = {
+        name: color,
+        hex: resolveProductColorHex(color, existingOption?.hex),
+        images: [...(existingOption?.images ?? []), ...dataUrls],
+      }
+
+      return {
+        ...prev,
+        colorOptions: existingOption
+          ? (prev.colorOptions ?? []).map((option) => option.name === color ? nextOption : option)
+          : [...(prev.colorOptions ?? []), nextOption],
+      }
+    })
+  }
+
   async function handleVariantImageUpload(index: number, files: FileList | null) {
     if (!files || files.length === 0) {
       return
@@ -1173,6 +1219,7 @@ export function AdminDashboardPage() {
       categories: product.categories ?? [product.category],
       imageUrl: product.imageUrl,
       images: product.images ?? [],
+      colorOptions: product.colorOptions ?? [],
       colors: product.colors ?? [],
       sizes: product.sizes ?? [],
       productType: product.productType ?? (product.variants && product.variants.length > 0 ? 'variable' : 'simple'),
@@ -1207,7 +1254,11 @@ export function AdminDashboardPage() {
       setIsSubmitting(true)
       setErrorMessage('')
       const normalizedPayload = normalizeProductPayload(productForm)
-      const validation = validateProductPayload(normalizedPayload, isProductOnOffer)
+      const validation = validateProductPayload(
+        normalizedPayload,
+        isProductOnOffer,
+        productEditor.mode === 'create' && (normalizedPayload.colors?.length ?? 0) > 0,
+      )
 
       if (!validation.isValid) {
         setProductFormErrors(validation.errors)
@@ -2447,10 +2498,14 @@ export function AdminDashboardPage() {
                 multiple
                 value={productForm.colors ?? []}
                 onChange={(event) =>
-                  setProductForm((prev) => ({
-                    ...prev,
-                    colors: parseMultiSelectValues(event.target),
-                  }))
+                  setProductForm((prev) => {
+                    const colors = parseMultiSelectValues(event.target)
+                    return {
+                      ...prev,
+                      colors,
+                      colorOptions: (prev.colorOptions ?? []).filter((option) => colors.includes(option.name)),
+                    }
+                  })
                 }
                 style={{ ...comboStyle, minHeight: '128px' }}
               >
@@ -2481,6 +2536,17 @@ export function AdminDashboardPage() {
               </select>
             </FormField>
           </HStack>
+
+          <ProductColorImageManager
+            colors={productForm.colors ?? []}
+            colorOptions={productForm.colorOptions ?? []}
+            onChange={(colorOptions) => setProductForm((prev) => ({ ...prev, colorOptions }))}
+            onFilesSelect={handleColorImagesUpload}
+          />
+
+          {productFormErrors.colorOptions ? (
+            <Text color="#b91c1c" fontSize="sm">{productFormErrors.colorOptions}</Text>
+          ) : null}
 
           <Box border="1px solid" borderColor="#e2e8f0" borderRadius="lg" p={3} bg="#f8fafc">
             <HStack justify="space-between" align="center" gap={3} flexWrap="wrap">

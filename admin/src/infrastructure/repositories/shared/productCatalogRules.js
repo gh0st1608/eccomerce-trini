@@ -29,6 +29,11 @@ const extractValuesFromVariantAttributes = (variants = [], names = []) => {
 };
 
 export const normalizeProductRecord = (record) => {
+  const normalizedColorOptions = Array.isArray(record.colorOptions)
+    ? record.colorOptions.filter(
+        (option) => option && typeof option.name === 'string' && Array.isArray(option.images),
+      )
+    : [];
   const normalizedImages =
     Array.isArray(record.images) && record.images.length > 0
       ? toUniqueStrings(record.images)
@@ -49,6 +54,7 @@ export const normalizeProductRecord = (record) => {
 
   const derivedColorValues = toUniqueStrings([
     ...(Array.isArray(record.colors) ? record.colors : []),
+    ...normalizedColorOptions.map((option) => option.name),
     ...extractValuesFromAttributes(existingAttributes, ['color']),
     ...extractValuesFromVariantAttributes(normalizedVariants, ['color']),
   ]);
@@ -97,6 +103,7 @@ export const normalizeProductRecord = (record) => {
     categories: normalizedCategories,
     imageUrl: record.imageUrl ?? normalizedImages[0] ?? '',
     images: normalizedImages,
+    colorOptions: normalizedColorOptions,
     productType: record.productType ?? (normalizedVariants.length > 0 ? 'variable' : 'simple'),
     attributes: existingAttributes,
     variants: normalizedVariants,

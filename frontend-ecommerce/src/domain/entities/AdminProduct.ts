@@ -15,6 +15,12 @@ export interface AdminProductInventory {
   inStock?: boolean
 }
 
+export interface AdminProductColorOption {
+  name: string
+  hex: string
+  images: string[]
+}
+
 export interface AdminProductVariant {
   id?: string
   sku?: string
@@ -44,6 +50,7 @@ export interface AdminProduct {
   categories?: string[]
   imageUrl: string
   images?: string[]
+  colorOptions?: AdminProductColorOption[]
   colors?: string[]
   sizes?: string[]
   productType?: 'simple' | 'variable'
@@ -70,6 +77,7 @@ export interface CreateAdminProductInput {
   categories?: string[]
   imageUrl: string
   images?: string[]
+  colorOptions?: AdminProductColorOption[]
   colors?: string[]
   sizes?: string[]
   productType?: 'simple' | 'variable'

@@ -17,6 +17,12 @@ const productInventorySchema = z.object({
   inStock: z.boolean().optional(),
 })
 
+const productColorOptionSchema = z.object({
+  name: z.string().min(1),
+  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  images: z.array(z.string().url()),
+})
+
 const variantAttributeSchema = z.object({
   name: z.string().min(1),
   value: z.string().min(1),
@@ -46,6 +52,7 @@ export const productDtoSchema = z.object({
   categories: z.array(z.string().min(1)).optional(),
   imageUrl: z.string().url().optional().default('https://picsum.photos/900/1200'),
   images: z.array(z.string().url()).optional(),
+  colorOptions: z.array(productColorOptionSchema).optional(),
   colors: z.array(z.string().min(1)).optional(),
   sizes: z.array(z.string().min(1)).optional(),
   productType: z.enum(['simple', 'variable']).optional(),

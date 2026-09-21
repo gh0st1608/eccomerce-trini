@@ -36,6 +36,7 @@ describe('Repositories, utils and validation', () => {
       category: 'camisas',
       imageUrl: pngDataUrl,
       images: [pngDataUrl],
+      colorOptions: [{ name: 'Azul marino', hex: '#1e3a5f', images: [pngDataUrl] }],
       price: 20,
       currency: 'PEN',
       stock: 2,
@@ -58,6 +59,7 @@ describe('Repositories, utils and validation', () => {
 
     expect(product.sku).toBe('ADM-01');
     expect(product.imageUrl).toBe(pngDataUrl);
+    expect(product.colorOptions[0]).toMatchObject({ name: 'Azul marino', hex: '#1e3a5f' });
     expect(user.role).toBe('support');
     expect(category.slug).toBe('polos');
   });
