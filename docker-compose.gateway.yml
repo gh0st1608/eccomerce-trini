@@ -1,4 +1,19 @@
 services:
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    profiles: ["backend","gateway"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    environment:
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:?Set NEW_RELIC_LICENSE_KEY in a root .env file or shell env}
+    expose:
+      - "4317"
+      - "4318"
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
   checkout-api:
     build:
       context: ./checkout
@@ -9,6 +24,7 @@ services:
     environment:
       ADMIN_API_BASE_URL: http://admin-api:3001/api/v1/admin
       CHECKOUT_SERVICE_TOKEN: ${CHECKOUT_SERVICE_TOKEN:-trini-checkout-service-token}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     expose:
       - "3000"
     ports:
@@ -16,6 +32,8 @@ services:
     depends_on:
       admin-api:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -31,10 +49,14 @@ services:
       - ./admin/.env
     environment:
       CHECKOUT_SERVICE_TOKEN: ${CHECKOUT_SERVICE_TOKEN:-trini-checkout-service-token}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     expose:
       - "3001"
     ports:
       - "3001:3001"
+    depends_on:
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
