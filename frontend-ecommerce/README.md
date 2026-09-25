@@ -68,7 +68,14 @@ Si prefieres correr sin Docker, `npm run dev` ya escucha en `0.0.0.0:5173`, por 
 - `VITE_APP_NAME`: nombre de la aplicacion
 - `VITE_ECOMMERCE_API_BASE_URL`: base URL del backend ecommerce (ej: `http://localhost:3000/api/v1/checkout`)
 - `VITE_ADMIN_API_BASE_URL`: base URL del backend admin (ej: `http://localhost:3001/api/v1/admin`)
+- `VITE_NEW_RELIC_BROWSER_ACCOUNT_ID`, `VITE_NEW_RELIC_BROWSER_TRUST_KEY`, `VITE_NEW_RELIC_BROWSER_AGENT_ID`, `VITE_NEW_RELIC_BROWSER_LICENSE_KEY`: credenciales del browser app de New Relic (opcionales; sin ellas el RUM queda deshabilitado, util en dev local)
 - `NGROK_AUTHTOKEN`: token de autenticacion para el túnel
+
+## Observabilidad
+
+- New Relic Browser (RUM) via `@newrelic/browser-agent`, inicializado en `src/main.tsx` antes del render.
+- Distributed tracing habilitado (`distributed_tracing.enabled` + `cors_use_tracecontext_headers`): el agente inyecta headers W3C `traceparent`/`tracestate` en los fetch hacia `VITE_ADMIN_API_BASE_URL`/`VITE_ECOMMERCE_API_BASE_URL`, correlacionando la carga del storefront con las trazas OTel de `admin`/`checkout` en un unico trace de New Relic.
+- Deshabilitado automaticamente si no se configuran las variables `VITE_NEW_RELIC_BROWSER_*`.
 
 ## Scripts
 

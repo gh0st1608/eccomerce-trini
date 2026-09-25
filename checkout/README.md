@@ -116,9 +116,12 @@ Respuesta:
 
 ## Observabilidad
 
-- OpenTelemetry con auto instrumentación
+- OpenTelemetry con auto instrumentación, inicializada antes que cualquier otro modulo (`src/observability/telemetry/instrumentation.js` es el primer import en `server.js`/`lambda.js`) para que Express/HTTP salgan correctamente instrumentados.
 - Exportación OTLP para traces, metrics y logs
 - Correlación por `traceId`, `spanId`, `requestId`
+- Spans de negocio por use case (`src/observability/tracing/instrument-usecase.js`) en `BuildWhatsappCheckoutUseCase`/`ResolveSharedCheckoutUseCase`.
+- Metrica custom `http.server.duration` (histograma por metodo/ruta/status) via `src/observability/metrics/http-metrics.middleware.js`.
+- Errores no controlados quedan marcados en el span activo (`recordException` + `setStatus(ERROR)`) ademas de logueados.
 - Health checks: `/health`, `/ready`, `/live`
 
 ## Seguridad

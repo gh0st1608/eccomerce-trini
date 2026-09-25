@@ -1,4 +1,5 @@
 import { createLogger } from './observability/logger/create-logger.js';
+import { instrumentUseCase } from './observability/tracing/instrument-usecase.js';
 import { env } from './config/env.js';
 import { HttpAdminProductRepository } from './infrastructure/repositories/HttpAdminProductRepository.js';
 import { HttpAdminStoreRepository } from './infrastructure/repositories/HttpAdminStoreRepository.js';
@@ -46,16 +47,20 @@ export const createContainer = ({ overrides = {} } = {}) => {
     fallbackPublicBaseUrl: env.checkoutSharePublicBaseUrl,
   });
 
-  const buildWhatsappCheckoutUseCase = new BuildWhatsappCheckoutUseCase({
-    productRepository,
-    storeRepository,
-    whatsappLinkService,
-    checkoutShareLinkService,
-    orderClient,
-  });
-  const resolveSharedCheckoutUseCase = new ResolveSharedCheckoutUseCase({
-    checkoutShareLinkService,
-  });
+  const buildWhatsappCheckoutUseCase = instrumentUseCase(
+    'BuildWhatsappCheckoutUseCase',
+    new BuildWhatsappCheckoutUseCase({
+      productRepository,
+      storeRepository,
+      whatsappLinkService,
+      checkoutShareLinkService,
+      orderClient,
+    }),
+  );
+  const resolveSharedCheckoutUseCase = instrumentUseCase(
+    'ResolveSharedCheckoutUseCase',
+    new ResolveSharedCheckoutUseCase({ checkoutShareLinkService }),
+  );
 
   return {
     logger,

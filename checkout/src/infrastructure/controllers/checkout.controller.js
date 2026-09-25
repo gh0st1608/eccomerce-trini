@@ -56,7 +56,7 @@ export const createCheckoutController = ({
         throw new ValidationError('Shared checkout token is required');
       }
 
-      const sharedCheckout = resolveSharedCheckoutUseCase.execute(token);
+      const sharedCheckout = await resolveSharedCheckoutUseCase.execute(token);
       res.status(200).json(
         successResponse({
           data: { sharedCheckout },

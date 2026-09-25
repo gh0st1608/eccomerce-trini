@@ -1,9 +1,13 @@
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { BaseError } from '../../domain/exceptions/BaseError.js';
 import { errorResponse } from '../../shared/utils/response.js';
 
 export const errorMiddleware = (err, req, res, _next) => {
   const traceId = req.context?.traceId ?? 'no-trace';
+  const activeSpan = trace.getActiveSpan();
+  activeSpan?.recordException(err);
+  activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
 
   if (err instanceof BaseError) {
     return res.status(err.statusCode).json(errorResponse({ code: err.code, message: err.message, traceId }));

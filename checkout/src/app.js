@@ -9,6 +9,7 @@ import { requestContextMiddleware } from './infrastructure/middlewares/request-c
 import { sanitizeMiddleware } from './infrastructure/middlewares/sanitize.middleware.js';
 import { errorMiddleware } from './infrastructure/middlewares/error.middleware.js';
 import { createLoggerMiddleware } from './infrastructure/middlewares/logger.middleware.js';
+import { httpMetricsMiddleware } from './observability/metrics/http-metrics.middleware.js';
 import { createCheckoutRouter } from './infrastructure/routes/checkout.routes.js';
 import { createHealthRouter } from './infrastructure/routes/health.routes.js';
 
