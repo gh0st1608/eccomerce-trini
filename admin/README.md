@@ -114,9 +114,12 @@ Request -> Route -> Validation Middleware -> Controller -> Use Case -> Repositor
 
 ## Observabilidad
 
-- OpenTelemetry auto instrumentation
+- OpenTelemetry auto instrumentation, inicializado antes que cualquier otro modulo (`src/observability/telemetry/instrumentation.js` es el primer import en `server.js`/`lambda.js`) para que Express/HTTP/DynamoDB queden correctamente instrumentados.
 - Exportación OTLP para traces, metrics y logs (compatible New Relic)
 - Correlación por `traceId`, `spanId`, `requestId`
+- Spans de negocio por use case (`src/observability/tracing/instrument-usecase.js`) en los endpoints publicos del storefront (productos, categorias, storefront-settings, pickup stores) para aislar tiempo de logica de app vs. repositorio/HTTP saliente.
+- Metrica custom `http.server.duration` (histograma por metodo/ruta/status) via `src/observability/metrics/http-metrics.middleware.js`.
+- Errores no controlados quedan marcados en el span activo (`recordException` + `setStatus(ERROR)`) ademas de logueados.
 
 ## Testing
 

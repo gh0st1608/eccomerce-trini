@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { requestContextMiddleware } from './infrastructure/middlewares/request-context.middleware.js';
 import { createLoggerMiddleware } from './infrastructure/middlewares/logger.middleware.js';
+import { httpMetricsMiddleware } from './observability/metrics/http-metrics.middleware.js';
 import { sanitizeMiddleware } from './infrastructure/middlewares/sanitize.middleware.js';
 import { errorMiddleware } from './infrastructure/middlewares/error.middleware.js';
 import { createProductRouter } from './infrastructure/routes/product.routes.js';
@@ -50,6 +51,7 @@ export const createApp = ({ logger, controllers }) => {
   app.disable('x-powered-by');
   app.use(requestContextMiddleware);
   app.use(createLoggerMiddleware(logger));
+  app.use(httpMetricsMiddleware);
   app.use(helmet());
   app.use((req, res, next) => {
     if (

@@ -1,5 +1,6 @@
 import { env } from './config/env.js';
 import { createLogger } from './observability/logger/create-logger.js';
+import { instrumentUseCase } from './observability/tracing/instrument-usecase.js';
 import { InMemoryInternalUserRepository } from './infrastructure/repositories/InMemoryInternalUserRepository.js';
 import { InMemoryStoreRepository } from './infrastructure/repositories/InMemoryStoreRepository.js';
 import { InMemoryProductRepository } from './infrastructure/repositories/InMemoryProductRepository.js';
@@ -122,7 +123,12 @@ export const createContainer = ({ overrides = {} } = {}) => {
         })
       : null);
 
-  const listProductsUseCase = new ListProductsUseCase({ productRepository });
+  // Storefront-facing (public, read) use cases get a dedicated trace span each,
+  // so New Relic distributed tracing can pinpoint which one is the bottleneck.
+  const listProductsUseCase = instrumentUseCase(
+    'ListProductsUseCase',
+    new ListProductsUseCase({ productRepository }),
+  );
   const createProductUseCase = new CreateProductUseCase({
     productRepository,
     productImageStorage,
@@ -132,30 +138,42 @@ export const createContainer = ({ overrides = {} } = {}) => {
     productImageStorage,
   });
   const deleteProductUseCase = new DeleteProductUseCase({ productRepository });
-  const getProductOptionsUseCase = new GetProductOptionsUseCase({
-    productRepository,
-    categoryRepository,
-    storefrontSettingsRepository,
-  });
-  const getProductByIdUseCase = new GetProductByIdUseCase({ productRepository });
+  const getProductOptionsUseCase = instrumentUseCase(
+    'GetProductOptionsUseCase',
+    new GetProductOptionsUseCase({ productRepository, categoryRepository, storefrontSettingsRepository }),
+  );
+  const getProductByIdUseCase = instrumentUseCase(
+    'GetProductByIdUseCase',
+    new GetProductByIdUseCase({ productRepository }),
+  );
   const registerCheckoutItemsUseCase = new RegisterCheckoutItemsUseCase({ productRepository });
   const listInternalUsersUseCase = new ListInternalUsersUseCase({ internalUserRepository });
   const createInternalUserUseCase = new CreateInternalUserUseCase({ internalUserRepository });
-  const listCategoriesUseCase = new ListCategoriesUseCase({ categoryRepository });
+  const listCategoriesUseCase = instrumentUseCase(
+    'ListCategoriesUseCase',
+    new ListCategoriesUseCase({ categoryRepository }),
+  );
   const createCategoryUseCase = new CreateCategoryUseCase({ categoryRepository, productImageStorage });
   const updateCategoryUseCase = new UpdateCategoryUseCase({ categoryRepository, productImageStorage });
   const deleteCategoryUseCase = new DeleteCategoryUseCase({ categoryRepository });
-  const getStorefrontSettingsUseCase = new GetStorefrontSettingsUseCase({
-    storefrontSettingsRepository,
-  });
+  const getStorefrontSettingsUseCase = instrumentUseCase(
+    'GetStorefrontSettingsUseCase',
+    new GetStorefrontSettingsUseCase({ storefrontSettingsRepository }),
+  );
   const updateStorefrontSettingsUseCase = new UpdateStorefrontSettingsUseCase({
     storefrontSettingsRepository,
   });
   const listStoresUseCase = new ListStoresUseCase({ storeRepository });
   const createStoreUseCase = new CreateStoreUseCase({ storeRepository });
   const updateStoreUseCase = new UpdateStoreUseCase({ storeRepository });
-  const listPickupStoresUseCase = new ListPickupStoresUseCase({ storeRepository });
-  const getPickupStoreByIdUseCase = new GetPickupStoreByIdUseCase({ storeRepository });
+  const listPickupStoresUseCase = instrumentUseCase(
+    'ListPickupStoresUseCase',
+    new ListPickupStoresUseCase({ storeRepository }),
+  );
+  const getPickupStoreByIdUseCase = instrumentUseCase(
+    'GetPickupStoreByIdUseCase',
+    new GetPickupStoreByIdUseCase({ storeRepository }),
+  );
   const listOrdersUseCase = new ListOrdersUseCase({ orderRepository });
   const createOrderUseCase = new CreateOrderUseCase({ orderRepository });
   const updateOrderUseCase = new UpdateOrderUseCase({ orderRepository });
