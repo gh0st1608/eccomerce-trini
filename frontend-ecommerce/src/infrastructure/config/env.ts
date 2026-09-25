@@ -21,6 +21,10 @@ const envSchema = z.object({
   VITE_ECOMMERCE_API_BASE_URL: urlOrRelativePathSchema.optional(),
   VITE_ADMIN_API_BASE_URL: urlOrRelativePathSchema.optional(),
   VITE_PUBLIC_API_TOKEN: z.string().optional(),
+  VITE_NEW_RELIC_BROWSER_ACCOUNT_ID: z.string().optional(),
+  VITE_NEW_RELIC_BROWSER_TRUST_KEY: z.string().optional(),
+  VITE_NEW_RELIC_BROWSER_AGENT_ID: z.string().optional(),
+  VITE_NEW_RELIC_BROWSER_LICENSE_KEY: z.string().optional(),
 })
 
 const parsedEnv = envSchema.parse(import.meta.env)
