@@ -1,0 +1,11 @@
+# DNS resolver used only by otel-collector. Queries go over DNS-over-TLS (port 853)
+# because the local ISP DNS (and plain port 53 traffic) returns NXDOMAIN for otlp.nr-data.net.
+.:53 {
+    forward . tls://1.1.1.1 tls://1.0.0.1 {
+        tls_servername cloudflare-dns.com
+        health_check 10s
+    }
+    cache 60
+    errors
+    log
+}

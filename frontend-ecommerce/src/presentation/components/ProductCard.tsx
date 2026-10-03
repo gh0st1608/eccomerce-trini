@@ -64,6 +64,8 @@ export function ProductCard({
                 bg="white"
                 width="100%"
                 aspectRatio="4 / 5"
+                loading="lazy"
+                decoding="async"
               />
               <Box
                 position="absolute"
@@ -92,6 +94,8 @@ export function ProductCard({
               bg="white"
               width="100%"
               aspectRatio="4 / 5"
+              loading="lazy"
+              decoding="async"
             />
           )}
           <Badge
@@ -204,6 +208,8 @@ export function ProductCard({
               bg="white"
               width="100%"
               aspectRatio="4 / 5"
+              loading="lazy"
+              decoding="async"
             />
             <Box
               position="absolute"
@@ -232,6 +238,8 @@ export function ProductCard({
             bg="white"
             width="100%"
             aspectRatio="4 / 5"
+            loading="lazy"
+            decoding="async"
           />
         )}
         <Badge

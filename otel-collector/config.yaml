@@ -16,29 +16,30 @@ processors:
     spike_limit_mib: 50
 
 exporters:
-  otlp/newrelic:
+  otlphttp/newrelic:
     endpoint: https://otlp.nr-data.net:4318
     headers:
       api-key: ${NEW_RELIC_LICENSE_KEY}
+    compression: gzip
 
   # Prints every span/metric/log to stdout, useful to verify data locally even
   # if the network path to New Relic is broken (DNS, firewall, etc).
   debug:
-    verbosity: detailed
+    verbosity: basic #detailed
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug, otlp/newrelic]
+      exporters: [debug, otlphttp/newrelic]
 
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug, otlp/newrelic]
+      exporters: [debug, otlphttp/newrelic]
 
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug, otlp/newrelic]
+      exporters: [debug, otlphttp/newrelic]
