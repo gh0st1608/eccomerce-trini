@@ -9,4 +9,5 @@ export const telemetryConfig = {
   logsExporter: env.otelLogsExporter,
   enableTracing: env.enableTracing,
   enableMetrics: env.enableMetrics,
+  enableLogging: env.enableLogging,
 };

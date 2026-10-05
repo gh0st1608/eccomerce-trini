@@ -12,8 +12,11 @@ const bootstrapLogger = createLogger({
   level: env.logLevel,
 });
 
-export const telemetrySdk = initTelemetry({
+const { sdk, forceFlush } = initTelemetry({
   telemetryConfig,
   newRelicConfig,
   logger: bootstrapLogger,
 });
+
+export const telemetrySdk = sdk;
+export const flushTelemetry = forceFlush;

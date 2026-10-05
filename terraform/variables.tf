@@ -180,8 +180,9 @@ variable "new_relic_license_key" {
 }
 
 variable "otel_exporter_otlp_endpoint" {
-  type    = string
-  default = "http://localhost:4318"
+  description = "OTLP endpoint for the Lambdas. Real AWS has no collector: use https://otlp.nr-data.net:4318 (localhost only works with the local Docker collector)."
+  type        = string
+  default     = "http://localhost:4318"
 }
 
 /* variable "admin_api_base_url" {
