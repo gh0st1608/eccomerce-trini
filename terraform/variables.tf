@@ -198,6 +198,30 @@ variable "new_relic_api_key" {
   sensitive   = true
 }
 
+variable "slo_availability_target" {
+  description = "Availability SLO (%) per backend over 28 days: requests not failing with a 5xx/unexpected error."
+  type        = number
+  default     = 99
+}
+
+variable "slo_latency_target" {
+  description = "Latency SLO (%) per backend over 28 days: share of requests faster than slo_latency_threshold_ms."
+  type        = number
+  default     = 90
+}
+
+variable "slo_latency_threshold_ms" {
+  description = "Latency SLI threshold in milliseconds (Lambda cold starts are ~1.5-1.7s)."
+  type        = number
+  default     = 2000
+}
+
+variable "alert_notification_emails" {
+  description = "Recipients of New Relic alert notifications. Empty creates the policy and conditions without notifications."
+  type        = list(string)
+  default     = []
+}
+
 variable "service_name_suffix" {
   description = "Suffix for the New Relic / OpenTelemetry service names (e.g. admin-trini-backend-prd)."
   type        = string
