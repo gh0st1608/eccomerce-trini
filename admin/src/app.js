@@ -6,6 +6,7 @@ import timeout from 'connect-timeout';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { requestContextMiddleware } from './infrastructure/middlewares/request-context.middleware.js';
+import { noStoreByDefaultMiddleware } from './infrastructure/middlewares/cache-control.middleware.js';
 import { createLoggerMiddleware } from './infrastructure/middlewares/logger.middleware.js';
 import { sanitizeMiddleware } from './infrastructure/middlewares/sanitize.middleware.js';
 import { errorMiddleware } from './infrastructure/middlewares/error.middleware.js';
@@ -49,6 +50,7 @@ export const createApp = ({ logger, controllers }) => {
 
   app.disable('x-powered-by');
   app.use(requestContextMiddleware);
+  app.use(noStoreByDefaultMiddleware);
   app.use(createLoggerMiddleware(logger));
   app.use(helmet());
   app.use((req, res, next) => {

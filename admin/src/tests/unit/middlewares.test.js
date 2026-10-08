@@ -14,12 +14,38 @@ describe('Middlewares', () => {
     const adminToken = process.env.ADMIN_AUTH_TOKEN ?? 'trini-admin-local-token';
 
     const nextForPublic = jest.fn();
-    publicReadAuthMiddleware({ headers: { authorization: `Bearer ${publicToken}` } }, {}, nextForPublic);
+    const publicRes = { setHeader: jest.fn() };
+    publicReadAuthMiddleware(
+      { method: 'GET', headers: { authorization: `Bearer ${publicToken}` } },
+      publicRes,
+      nextForPublic,
+    );
     expect(nextForPublic).toHaveBeenCalledWith();
+    expect(publicRes.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      expect.stringMatching(/^public, max-age=\d+$/),
+    );
 
     const nextForAdmin = jest.fn();
-    publicReadAuthMiddleware({ headers: { authorization: `Bearer ${adminToken}` } }, {}, nextForAdmin);
+    const adminRes = { setHeader: jest.fn() };
+    publicReadAuthMiddleware(
+      { method: 'GET', headers: { authorization: `Bearer ${adminToken}` } },
+      adminRes,
+      nextForAdmin,
+    );
     expect(nextForAdmin).toHaveBeenCalledWith();
+    expect(adminRes.setHeader).not.toHaveBeenCalled();
+  });
+
+  test('publicReadAuthMiddleware only marks public GETs as cacheable', () => {
+    const publicToken = process.env.PUBLIC_API_TOKEN ?? 'trini-public-readonly-token';
+    const res = { setHeader: jest.fn() };
+    publicReadAuthMiddleware(
+      { method: 'POST', headers: { authorization: `Bearer ${publicToken}` } },
+      res,
+      jest.fn(),
+    );
+    expect(res.setHeader).not.toHaveBeenCalled();
   });
 
   test('publicReadAuthMiddleware rejects missing or invalid tokens', () => {
@@ -82,17 +108,18 @@ describe('Middlewares', () => {
 
   test('error middleware handles domain error', () => {
     const req = { context: { traceId: 't1' }, log: { error: jest.fn() } };
-    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn(), setHeader: jest.fn() };
 
     errorMiddleware(new ValidationError('bad input'), req, res, () => {});
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledTimes(1);
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
   });
 
   test('error middleware handles unknown error', () => {
     const req = { context: { traceId: 't1' }, log: { error: jest.fn() } };
-    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn(), setHeader: jest.fn() };
 
     errorMiddleware(new Error('unknown'), req, res, () => {});
 
@@ -102,7 +129,7 @@ describe('Middlewares', () => {
 
   test('error middleware maps CORS rejection to 403', () => {
     const req = { context: { traceId: 't1' }, log: { error: jest.fn() } };
-    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn(), setHeader: jest.fn() };
 
     errorMiddleware(new Error('Not allowed by CORS'), req, res, () => {});
 
@@ -121,7 +148,7 @@ describe('Middlewares', () => {
 
   test('error middleware maps body too large to 413', () => {
     const req = { context: { traceId: 't1' }, log: { error: jest.fn() } };
-    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn(), setHeader: jest.fn() };
 
     errorMiddleware({ type: 'entity.too.large', status: 413 }, req, res, () => {});
 

@@ -5,6 +5,8 @@ import { errorResponse } from '../../shared/utils/response.js';
 
 export const errorMiddleware = (err, req, res, _next) => {
   const traceId = req.context?.traceId ?? 'no-trace';
+  // Never let the CDN cache an error, even on routes that opted into public caching.
+  res.setHeader('Cache-Control', 'no-store');
   const activeSpan = trace.getActiveSpan();
   activeSpan?.recordException(err);
   activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });

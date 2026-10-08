@@ -79,6 +79,8 @@ export const env = {
   adminAuthPassword: process.env.ADMIN_AUTH_PASSWORD ?? 'admin123',
   adminAuthToken: process.env.ADMIN_AUTH_TOKEN ?? 'trini-admin-local-token',
   publicApiToken: process.env.PUBLIC_API_TOKEN ?? 'trini-public-readonly-token',
+  // CDN/browser cache for public catalog GETs (0 disables it). Storefront edits show up after this.
+  publicCacheMaxAgeSeconds: Number(process.env.PUBLIC_CACHE_MAX_AGE_SECONDS ?? 60),
   checkoutServiceToken: process.env.CHECKOUT_SERVICE_TOKEN ?? 'trini-checkout-service-token',
   databaseUrl: process.env.DATABASE_URL,
   corsAllowedOrigins: parseList(process.env.CORS_ALLOWED_ORIGINS),
