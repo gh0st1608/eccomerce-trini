@@ -58,3 +58,14 @@ output "product_images_cloudfront_domain_name" {
   description = "Only set when use_localstack = false."
   value       = try(aws_cloudfront_distribution.product_images[0].domain_name, null)
 }
+
+# Public Browser agent settings, injected as VITE_NEW_RELIC_BROWSER_* at frontend build time
+# (terraform/scripts/build-frontend.ps1). Safe to expose: they ship inside the JS bundle.
+output "new_relic_browser_config" {
+  value = local.browser_loader_config == null ? null : {
+    account_id  = tostring(local.browser_loader_config.accountID)
+    trust_key   = tostring(local.browser_loader_config.trustKey)
+    agent_id    = tostring(local.browser_loader_config.agentID)
+    license_key = local.browser_loader_config.licenseKey
+  }
+}

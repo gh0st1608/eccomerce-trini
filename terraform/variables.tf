@@ -185,6 +185,19 @@ variable "new_relic_license_key" {
   sensitive = true
 }
 
+variable "new_relic_account_id" {
+  description = "New Relic account ID that owns the Browser app (and future alerts/SLOs)."
+  type        = string
+  default     = ""
+}
+
+variable "new_relic_api_key" {
+  description = "New Relic User API key (NRAK-...) used by the newrelic provider (NerdGraph). Not the ingest license key. Empty disables New Relic resources (e.g. LocalStack runs)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "service_name_suffix" {
   description = "Suffix for the New Relic / OpenTelemetry service names (e.g. admin-trini-backend-prd)."
   type        = string

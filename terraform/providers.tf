@@ -31,3 +31,13 @@ provider "aws" {
     tags = local.common_tags
   }
 }
+
+# New Relic management API (NerdGraph). Authenticates with a User API key, not an ingest key.
+# Resources are only created when var.new_relic_api_key is set (see newrelic.tf). The provider
+# still requires both arguments even with nothing to manage, so LocalStack/local runs get
+# placeholders that are never used for an API call.
+provider "newrelic" {
+  account_id = var.new_relic_account_id == "" ? 0 : tonumber(var.new_relic_account_id)
+  api_key    = var.new_relic_api_key == "" ? "not-configured" : var.new_relic_api_key
+  region     = "US"
+}
