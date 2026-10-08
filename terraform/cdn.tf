@@ -69,6 +69,17 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
 }
 
 
+resource "aws_cloudfront_function" "spa_rewrite" {
+  count = local.create_cdn
+
+  name    = "${local.name_prefix}-spa-rewrite"
+  runtime = "cloudfront-js-2.0"
+  comment = "Rewrites SPA routes (no file extension) to /index.html"
+  publish = true
+  code    = file("${path.module}/functions/spa-rewrite.js")
+}
+
+
 resource "aws_cloudfront_distribution" "frontend" {
   count = local.create_cdn
 
@@ -121,30 +132,19 @@ resource "aws_cloudfront_distribution" "frontend" {
 
 
   # ============================================================
-  # SPA FALLBACK
-  # ============================================================
-
-  custom_error_response {
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 0
-  }
-
-  custom_error_response {
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
-    error_caching_min_ttl = 0
-  }
-
-
-  # ============================================================
   # FRONTEND
   # ============================================================
+  # SPA fallback lives in the spa_rewrite function below, scoped to this behavior.
+  # Do not use distribution-wide custom_error_response here: it also rewrites
+  # /api/v1/* 403/404 responses into a 200 HTML page.
 
   default_cache_behavior {
     target_origin_id = "frontend-s3"
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_rewrite[0].arn
+    }
 
     viewer_protocol_policy = "redirect-to-https"
 
