@@ -31,18 +31,19 @@ resource "aws_lambda_function" "checkout_api" {
   ]
 
   environment {
-    variables = {
+    variables = merge(local.otel_lambda_environment, {
       PORT        = "3000"
       NODE_ENV    = var.environment == "local" ? "development" : "production"
-      APP_NAME    = "checkout-trini-backend"
+      APP_NAME    = local.checkout_service_name
       APP_VERSION = "1.0.0"
 
       # Logging / observability
       LOG_LEVEL                   = var.log_level
-      NEW_RELIC_APP_NAME          = "checkout-trini-backend"
+      NEW_RELIC_APP_NAME          = local.checkout_service_name
       NEW_RELIC_LICENSE_KEY       = var.new_relic_license_key
-      OTEL_SERVICE_NAME           = "checkout-trini-backend"
+      OTEL_SERVICE_NAME           = local.checkout_service_name
       OTEL_EXPORTER_OTLP_ENDPOINT = var.otel_exporter_otlp_endpoint
+      OTEL_RESOURCE_ATTRIBUTES    = "service.version=1.0.0"
 
       # Application
       JWT_SECRET           = var.jwt_secret
@@ -62,7 +63,7 @@ resource "aws_lambda_function" "checkout_api" {
       ADMIN_API_BASE_URL             = var.admin_api_base_url
       PUBLIC_API_TOKEN               = var.public_api_token
       CHECKOUT_SERVICE_TOKEN         = var.checkout_service_token
-    }
+    })
   }
 }
 
@@ -94,18 +95,19 @@ resource "aws_lambda_function" "admin_api" {
   ]
 
   environment {
-    variables = {
+    variables = merge(local.otel_lambda_environment, {
       PORT        = "3001"
       NODE_ENV    = var.environment == "local" ? "development" : "production"
-      APP_NAME    = "admin-trini-backend"
+      APP_NAME    = local.admin_service_name
       APP_VERSION = "1.0.0"
 
       # Logging / observability
       LOG_LEVEL                   = var.log_level
-      NEW_RELIC_APP_NAME          = "admin-trini-backend"
+      NEW_RELIC_APP_NAME          = local.admin_service_name
       NEW_RELIC_LICENSE_KEY       = var.new_relic_license_key
-      OTEL_SERVICE_NAME           = "admin-trini-backend"
+      OTEL_SERVICE_NAME           = local.admin_service_name
       OTEL_EXPORTER_OTLP_ENDPOINT = var.otel_exporter_otlp_endpoint
+      OTEL_RESOURCE_ATTRIBUTES    = "service.version=1.0.0"
 
       # Application
       JWT_SECRET           = var.jwt_secret
@@ -142,6 +144,6 @@ resource "aws_lambda_function" "admin_api" {
       DYNAMODB_TABLE_INTERNAL_USERS      = aws_dynamodb_table.internal_users.name
       DYNAMODB_TABLE_STOREFRONT_SETTINGS = aws_dynamodb_table.storefront_settings.name
       DYNAMODB_TABLE_ORDERS              = aws_dynamodb_table.orders.name
-    }
+    })
   }
 }

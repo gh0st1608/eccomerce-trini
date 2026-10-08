@@ -179,6 +179,17 @@ variable "new_relic_license_key" {
   sensitive = true
 }
 
+variable "service_name_suffix" {
+  description = "Suffix for the New Relic / OpenTelemetry service names (e.g. admin-trini-backend-prd)."
+  type        = string
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "prd"], var.service_name_suffix)
+    error_message = "service_name_suffix must be \"dev\" or \"prd\"."
+  }
+}
+
 variable "otel_exporter_otlp_endpoint" {
   description = "OTLP endpoint for the Lambdas. Real AWS has no collector: use https://otlp.nr-data.net:4318 (localhost only works with the local Docker collector)."
   type        = string

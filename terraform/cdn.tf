@@ -203,7 +203,12 @@ resource "aws_cloudfront_distribution" "frontend" {
         "Content-Type",
         "Origin",
         "Access-Control-Request-Headers",
-        "Access-Control-Request-Method"
+        "Access-Control-Request-Method",
+        # Distributed tracing: without these, checkout -> admin (via this distribution)
+        # and browser -> API traces break into disconnected pieces in New Relic.
+        "traceparent",
+        "tracestate",
+        "newrelic"
       ]
 
       cookies {
