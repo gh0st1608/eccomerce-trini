@@ -6,6 +6,7 @@ import { telemetryConfig } from '../../config/telemetry.js';
 import { newRelicConfig } from '../../config/newrelic.js';
 import { createBootstrapLogger } from './bootstrap-logger.js';
 import { initTelemetry } from './init-telemetry.js';
+import { registerProcessErrorHandlers } from './process-error-handlers.js';
 
 const bootstrapLogger = createBootstrapLogger({
   appName: env.appName,
@@ -16,6 +17,12 @@ const { sdk, forceFlush } = initTelemetry({
   telemetryConfig,
   newRelicConfig,
   logger: bootstrapLogger,
+});
+
+registerProcessErrorHandlers({
+  serviceName: telemetryConfig.serviceName,
+  logger: bootstrapLogger,
+  forceFlush,
 });
 
 export const telemetrySdk = sdk;

@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { requestContextMiddleware } from './infrastructure/middlewares/request-context.middleware.js';
 import { noStoreByDefaultMiddleware } from './infrastructure/middlewares/cache-control.middleware.js';
+import { rateLimitExceededHandler } from './observability/security/record-security-event.js';
 import { createLoggerMiddleware } from './infrastructure/middlewares/logger.middleware.js';
 import { sanitizeMiddleware } from './infrastructure/middlewares/sanitize.middleware.js';
 import { errorMiddleware } from './infrastructure/middlewares/error.middleware.js';
@@ -71,6 +72,7 @@ export const createApp = ({ logger, controllers }) => {
       max: 120,
       standardHeaders: true,
       legacyHeaders: false,
+      handler: rateLimitExceededHandler,
     }),
   );
   app.use(express.json({ limit: env.requestBodyLimit }));

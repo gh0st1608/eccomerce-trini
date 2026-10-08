@@ -16,6 +16,7 @@ import { PeriodicExportingMetricReader, AggregationTemporality } from '@opentele
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { isHealthCheckPath } from './health-check-paths.js';
 import { ServerSpanProcessor } from './server-span-processor.js';
+import { addDynamoDbTableAttributes } from './dynamodb-span-attributes.js';
 
 // Surface OTLP export failures (DNS, TLS, auth, etc.) that otherwise fail silently.
 const registerDiagLogger = (logger) =>
@@ -96,7 +97,7 @@ export const initTelemetry = ({ telemetryConfig, newRelicConfig, logger }) => {
       new UndiciInstrumentation(),
       // Express 5 routing is traced by the router instrumentation (not instrumentation-express).
       new RouterInstrumentation(),
-      new AwsInstrumentation(),
+      new AwsInstrumentation({ preRequestHook: addDynamoDbTableAttributes }),
       new PinoInstrumentation(),
       new RuntimeNodeInstrumentation(),
     ],

@@ -1,6 +1,7 @@
 import { env } from './config/env.js';
 import { createLogger } from './observability/logger/create-logger.js';
-import { instrumentUseCase } from './observability/tracing/instrument-usecase.js';
+import { instrumentUseCase, instrumentUseCases } from './observability/tracing/instrument-usecase.js';
+import { countOrdersCreated } from './observability/metrics/business-metrics.js';
 import { InMemoryInternalUserRepository } from './infrastructure/repositories/InMemoryInternalUserRepository.js';
 import { InMemoryStoreRepository } from './infrastructure/repositories/InMemoryStoreRepository.js';
 import { InMemoryProductRepository } from './infrastructure/repositories/InMemoryProductRepository.js';
@@ -125,6 +126,7 @@ export const createContainer = ({ overrides = {} } = {}) => {
 
   // Storefront-facing (public, read) use cases get a dedicated trace span each,
   // so New Relic distributed tracing can pinpoint which one is the bottleneck.
+  // The rest are instrumented in bulk where controllers are built (instrumentUseCases).
   const listProductsUseCase = instrumentUseCase(
     'ListProductsUseCase',
     new ListProductsUseCase({ productRepository }),
@@ -175,14 +177,14 @@ export const createContainer = ({ overrides = {} } = {}) => {
     new GetPickupStoreByIdUseCase({ storeRepository }),
   );
   const listOrdersUseCase = new ListOrdersUseCase({ orderRepository });
-  const createOrderUseCase = new CreateOrderUseCase({ orderRepository });
+  const createOrderUseCase = countOrdersCreated(new CreateOrderUseCase({ orderRepository }));
   const updateOrderUseCase = new UpdateOrderUseCase({ orderRepository });
   const deleteOrderUseCase = new DeleteOrderUseCase({ orderRepository });
 
   return {
     logger,
     controllers: {
-      productController: createProductController({
+      productController: createProductController(instrumentUseCases({
         listProductsUseCase,
         getProductOptionsUseCase,
         createProductUseCase,
@@ -190,37 +192,37 @@ export const createContainer = ({ overrides = {} } = {}) => {
         deleteProductUseCase,
         getProductByIdUseCase,
         registerCheckoutItemsUseCase,
-      }),
-      internalUserController: createInternalUserController({
+      })),
+      internalUserController: createInternalUserController(instrumentUseCases({
         listInternalUsersUseCase,
         createInternalUserUseCase,
-      }),
-      categoryController: createCategoryController({
+      })),
+      categoryController: createCategoryController(instrumentUseCases({
         listCategoriesUseCase,
         createCategoryUseCase,
         updateCategoryUseCase,
         deleteCategoryUseCase,
-      }),
-      storefrontSettingsController: createStorefrontSettingsController({
+      })),
+      storefrontSettingsController: createStorefrontSettingsController(instrumentUseCases({
         getStorefrontSettingsUseCase,
         updateStorefrontSettingsUseCase,
-      }),
-      storeController: createStoreController({
+      })),
+      storeController: createStoreController(instrumentUseCases({
         listStoresUseCase,
         createStoreUseCase,
         updateStoreUseCase,
-      }),
-      publicStoreController: createPublicStoreController({
+      })),
+      publicStoreController: createPublicStoreController(instrumentUseCases({
         listPickupStoresUseCase,
         getPickupStoreByIdUseCase,
-      }),
+      })),
       authController: createAuthController(),
-      orderController: createOrderController({
+      orderController: createOrderController(instrumentUseCases({
         listOrdersUseCase,
         createOrderUseCase,
         updateOrderUseCase,
         deleteOrderUseCase,
-      }),
+      })),
     },
   };
 };

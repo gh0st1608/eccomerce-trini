@@ -128,12 +128,16 @@ describe('Middlewares', () => {
   });
 
   test('error middleware maps CORS rejection to 403', () => {
-    const req = { context: { traceId: 't1' }, log: { error: jest.fn() } };
+    const req = { context: { traceId: 't1' }, log: { error: jest.fn(), warn: jest.fn() } };
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn(), setHeader: jest.fn() };
 
     errorMiddleware(new Error('Not allowed by CORS'), req, res, () => {});
 
     expect(req.log.error).toHaveBeenCalledTimes(0);
+    expect(req.log.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ event: expect.objectContaining({ category: 'cors' }) }),
+      'Security event: cors.origin_rejected',
+    );
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
