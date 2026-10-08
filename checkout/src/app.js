@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import timeout from 'connect-timeout';
 import rateLimit from 'express-rate-limit';
+import { rateLimitExceededHandler } from './observability/security/record-security-event.js';
 import { env } from './config/env.js';
 import { requestContextMiddleware } from './infrastructure/middlewares/request-context.middleware.js';
 import { sanitizeMiddleware } from './infrastructure/middlewares/sanitize.middleware.js';
@@ -54,6 +55,7 @@ export const createApp = ({ logger, controllers }) => {
       max: 100,
       standardHeaders: true,
       legacyHeaders: false,
+      handler: rateLimitExceededHandler,
     }),
   );
   app.use(express.json({ limit: env.requestBodyLimit }));

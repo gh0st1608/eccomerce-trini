@@ -1,16 +1,30 @@
-import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
 import { HTTP_STATUS } from '../../shared/constants/http-status.js';
 import { BaseError } from '../../domain/exceptions/BaseError.js';
 import { errorResponse } from '../../shared/utils/response.js';
+import { recordSpanError } from '../../observability/tracing/record-span-error.js';
+import { recordSecurityEvent } from '../../observability/security/record-security-event.js';
 
 export const errorMiddleware = (err, req, res, _next) => {
   const traceId = req.context?.traceId ?? 'no-trace';
-  const activeSpan = trace.getActiveSpan();
-  activeSpan?.recordException(err);
-  activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+  recordSpanError(trace.getActiveSpan(), err);
+
+  // Rejected origins used to fall through to a 500.
+  if (err instanceof Error && err.message === 'Not allowed by CORS') {
+    recordSecurityEvent(req, {
+      category: 'cors',
+      action: 'origin_rejected',
+      reason: 'origin_not_allowed',
+    });
+    return res
+      .status(HTTP_STATUS.FORBIDDEN)
+      .json(errorResponse({ code: 'FORBIDDEN', message: 'Origin not allowed', traceId }));
+  }
 
   if (err instanceof BaseError) {
-    return res.status(err.statusCode).json(errorResponse({ code: err.code, message: err.message, traceId }));
+    return res
+      .status(err.statusCode)
+      .json(errorResponse({ code: err.code, message: err.message, traceId }));
   }
 
   if (err?.type === 'entity.too.large' || err?.status === HTTP_STATUS.PAYLOAD_TOO_LARGE) {
@@ -25,9 +39,7 @@ export const errorMiddleware = (err, req, res, _next) => {
 
   req.log?.error({ err }, 'Unhandled error');
   const message =
-    process.env.NODE_ENV === 'production'
-      ? 'Unexpected error'
-      : err?.message || 'Unexpected error';
+    process.env.NODE_ENV === 'production' ? 'Unexpected error' : err?.message || 'Unexpected error';
 
   return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
     errorResponse({

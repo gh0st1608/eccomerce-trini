@@ -1,5 +1,6 @@
 import { createLogger } from './observability/logger/create-logger.js';
 import { instrumentUseCase } from './observability/tracing/instrument-usecase.js';
+import { countCheckoutsCreated } from './observability/metrics/business-metrics.js';
 import { env } from './config/env.js';
 import { HttpAdminProductRepository } from './infrastructure/repositories/HttpAdminProductRepository.js';
 import { HttpAdminStoreRepository } from './infrastructure/repositories/HttpAdminStoreRepository.js';
@@ -49,13 +50,13 @@ export const createContainer = ({ overrides = {} } = {}) => {
 
   const buildWhatsappCheckoutUseCase = instrumentUseCase(
     'BuildWhatsappCheckoutUseCase',
-    new BuildWhatsappCheckoutUseCase({
+    countCheckoutsCreated(new BuildWhatsappCheckoutUseCase({
       productRepository,
       storeRepository,
       whatsappLinkService,
       checkoutShareLinkService,
       orderClient,
-    }),
+    })),
   );
   const resolveSharedCheckoutUseCase = instrumentUseCase(
     'ResolveSharedCheckoutUseCase',
