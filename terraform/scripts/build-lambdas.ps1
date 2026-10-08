@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 
-foreach ($service in @('ecommerce', 'admin')) {
+foreach ($service in @('checkout', 'admin')) {
   $servicePath = Join-Path $root $service
   Write-Host "==> Building Lambda package for $service" -ForegroundColor Cyan
   Push-Location $servicePath
@@ -17,4 +17,4 @@ foreach ($service in @('ecommerce', 'admin')) {
   }
 }
 
-Write-Host "Done. dist/lambda.zip is ready in ecommerce/ and admin/." -ForegroundColor Green
+Write-Host "Done. dist/lambda.zip is ready in checkout/ and admin/." -ForegroundColor Green
