@@ -69,9 +69,15 @@ variable "lambda_runtime" {
 }
 
 variable "lambda_memory_size" {
-  description = "Memory (MB) allocated to each backend Lambda function."
+  description = "Memory (MB) allocated to each backend Lambda function. CPU scales with memory, so 1024 roughly halves cold-start init vs 512."
   type        = number
-  default     = 512
+  default     = 1024
+}
+
+variable "public_cache_max_age_seconds" {
+  description = "CloudFront/browser cache TTL for public catalog GETs served by admin-api (0 disables). Storefront edits take up to this long to show."
+  type        = number
+  default     = 60
 }
 
 variable "lambda_timeout" {

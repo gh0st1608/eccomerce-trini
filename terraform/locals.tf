@@ -23,9 +23,8 @@ locals {
     # Telemetry is flushed before each response; cap export time so a slow New Relic
     # endpoint can't eat into lambda_timeout.
     OTEL_EXPORTER_OTLP_TIMEOUT = "3000"
-    # Load only the instrumentations the services use (shorter cold start).
-    OTEL_NODE_ENABLED_INSTRUMENTATIONS = "http,undici,router,express,aws-sdk,pino,runtime-node"
-    # Adds cloud.region, faas.name, etc. to the resource.
-    OTEL_NODE_RESOURCE_DETECTORS = "env,host,process,aws"
+    # The services register their instrumentations explicitly (init-telemetry.js), so
+    # OTEL_NODE_ENABLED_INSTRUMENTATIONS no longer applies; only built-in detectors are available.
+    OTEL_NODE_RESOURCE_DETECTORS = "env,host,process"
   }
 }

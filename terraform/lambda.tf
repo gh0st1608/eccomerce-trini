@@ -1,5 +1,5 @@
 # Both zips are produced by `npm run build` in each service (see
-# ecommerce/scripts/build-lambda.mjs and admin/scripts/build-lambda.mjs), which
+# checkout/scripts/build-lambda.mjs and admin/scripts/build-lambda.mjs), which
 # runs `npm prune --omit=dev` and tars src/ + package.json + package-lock.json.
 # Run `terraform/scripts/build-lambdas.ps1` (or .sh) before `terraform apply`,
 # exactly like the "Build -> Package Lambda -> Deploy" steps already used in CI.
@@ -126,6 +126,9 @@ resource "aws_lambda_function" "admin_api" {
       ADMIN_AUTH_TOKEN       = var.admin_auth_token
       PUBLIC_API_TOKEN       = var.public_api_token
       CHECKOUT_SERVICE_TOKEN = var.checkout_service_token
+
+      # Public catalog GETs cacheable by CloudFront for this many seconds
+      PUBLIC_CACHE_MAX_AGE_SECONDS = tostring(var.public_cache_max_age_seconds)
 
       # Product image storage
       PRODUCT_IMAGE_STORAGE_ENABLED = tostring(var.product_image_storage_enabled)

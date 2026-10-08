@@ -80,6 +80,72 @@ resource "aws_cloudfront_function" "spa_rewrite" {
 }
 
 
+# API caching is opt-in per response: the backend sends Cache-Control: no-store by default and
+# `public, max-age=N` only for public catalog GETs (admin publicReadAuthMiddleware).
+resource "aws_cloudfront_cache_policy" "api" {
+  count = local.create_cdn
+
+  name        = "${local.name_prefix}-api-cache"
+  comment     = "Honors API Cache-Control; keyed by token, origin and query string"
+  min_ttl     = 0
+  default_ttl = 0
+  max_ttl     = 300
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+
+    # Authorization keeps public-token and admin-token responses in separate cache entries.
+    # Origin keeps CORS response headers correct per requesting site.
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = ["Authorization", "Origin"]
+      }
+    }
+
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "api" {
+  count = local.create_cdn
+
+  name    = "${local.name_prefix}-api-origin-request"
+  comment = "Forwards CORS and distributed-tracing headers without adding them to the cache key"
+
+  headers_config {
+    header_behavior = "whitelist"
+    headers {
+      items = [
+        "Content-Type",
+        "Access-Control-Request-Headers",
+        "Access-Control-Request-Method",
+        # Distributed tracing: without these, checkout -> admin (via this distribution)
+        # and browser -> API traces break into disconnected pieces in New Relic.
+        "traceparent",
+        "tracestate",
+        "newrelic",
+      ]
+    }
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+}
+
+
 resource "aws_cloudfront_distribution" "frontend" {
   count = local.create_cdn
 
@@ -159,6 +225,11 @@ resource "aws_cloudfront_distribution" "frontend" {
       "HEAD"
     ]
 
+    # gzip/brotli at the edge: the main JS bundle goes from ~860 KB to ~250 KB.
+    compress = true
+
+    # TTLs come from the Cache-Control set on each S3 object at deploy time
+    # (immutable for hashed /assets/*, short s-maxage for index.html).
     forwarded_values {
       query_string = false
 
@@ -195,30 +266,12 @@ resource "aws_cloudfront_distribution" "frontend" {
       "HEAD"
     ]
 
-    forwarded_values {
-      query_string = true
+    compress = true
 
-      headers = [
-        "Authorization",
-        "Content-Type",
-        "Origin",
-        "Access-Control-Request-Headers",
-        "Access-Control-Request-Method",
-        # Distributed tracing: without these, checkout -> admin (via this distribution)
-        # and browser -> API traces break into disconnected pieces in New Relic.
-        "traceparent",
-        "tracestate",
-        "newrelic"
-      ]
-
-      cookies {
-        forward = "none"
-      }
-    }
-
-    min_ttl     = 0
-    default_ttl = 0
-    max_ttl     = 0
+    # Cache key (Authorization, Origin, query) is separate from what is merely forwarded
+    # (tracing headers), so per-request traceparent values don't defeat the cache.
+    cache_policy_id          = aws_cloudfront_cache_policy.api[0].id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api[0].id
   }
 
 
