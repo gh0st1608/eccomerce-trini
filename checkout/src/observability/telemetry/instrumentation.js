@@ -1,15 +1,15 @@
 // Must be the FIRST import in any entrypoint (server.js/lambda.js), before container.js/app.js,
-// so OTel auto-instrumentation hooks register before express/http-client modules are required.
+// so OTel instrumentation hooks register before express/http-client/pino modules are required.
+// Nothing imported here may load pino (see bootstrap-logger.js).
 import { env } from '../../config/env.js';
 import { telemetryConfig } from '../../config/telemetry.js';
 import { newRelicConfig } from '../../config/newrelic.js';
-import { createLogger } from '../logger/create-logger.js';
+import { createBootstrapLogger } from './bootstrap-logger.js';
 import { initTelemetry } from './init-telemetry.js';
 
-const bootstrapLogger = createLogger({
+const bootstrapLogger = createBootstrapLogger({
   appName: env.appName,
   environment: env.nodeEnv,
-  level: env.logLevel,
 });
 
 const { sdk, forceFlush } = initTelemetry({

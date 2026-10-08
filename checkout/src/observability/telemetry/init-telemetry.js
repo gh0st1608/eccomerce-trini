@@ -1,6 +1,12 @@
 import { diag, DiagLogLevel } from '@opentelemetry/api';
 import { NodeSDK, tracing } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+// Individual instrumentations instead of @opentelemetry/auto-instrumentations-node: the
+// meta-package requires 40+ modules at startup even when disabled, adding ~0.5s to cold starts.
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
+import { RouterInstrumentation } from '@opentelemetry/instrumentation-router';
+import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';
+import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
@@ -44,7 +50,8 @@ const createSignalPipelines = ({ telemetryConfig, newRelicConfig }) => {
         })
       : null,
     logProcessor: telemetryConfig.enableLogging
-      ? new BatchLogRecordProcessor(new OTLPLogExporter(exporterOptions('logs')))
+      ? // sdk-logs >= 0.2xx takes an options object; a bare exporter silently breaks every export.
+        new BatchLogRecordProcessor({ exporter: new OTLPLogExporter(exporterOptions('logs')) })
       : null,
   };
 };
@@ -81,12 +88,15 @@ export const initTelemetry = ({ telemetryConfig, newRelicConfig, logger }) => {
     metricReader: pipelines.metricReader ?? undefined,
     logRecordProcessors: pipelines.logProcessor ? [pipelines.logProcessor] : [],
     instrumentations: [
-      getNodeAutoInstrumentations({
+      new HttpInstrumentation({
         // Docker healthchecks hit these every few seconds; they would skew throughput/latency/SLIs.
-        '@opentelemetry/instrumentation-http': {
-          ignoreIncomingRequestHook: (req) => isHealthCheckPath(req.url),
-        },
+        ignoreIncomingRequestHook: (req) => isHealthCheckPath(req.url),
       }),
+      new UndiciInstrumentation(),
+      // Express 5 routing is traced by the router instrumentation (not instrumentation-express).
+      new RouterInstrumentation(),
+      new PinoInstrumentation(),
+      new RuntimeNodeInstrumentation(),
     ],
   });
 
