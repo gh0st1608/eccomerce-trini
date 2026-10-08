@@ -35,7 +35,8 @@ export function initNewRelicBrowser() {
         allowed_origins: allowedOrigins,
       },
       privacy: { cookies_enabled: true },
-      ajax: { deny_list: [] },
+      // Keep New Relic's default: without it the agent records its own harvest calls as AJAX.
+      ajax: { deny_list: ['bam.nr-data.net'] },
     },
     loader_config: {
       accountID: env.VITE_NEW_RELIC_BROWSER_ACCOUNT_ID,
